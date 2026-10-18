@@ -1541,15 +1541,25 @@ export const supabaseService = {
   // ADMIN IMPERSONATION
   // --------------------------------------------------------------------------
   async impersonateUser(targetUserId: string): Promise<{ success: boolean; user?: CustomerUser; error?: string }> {
-    const adminUser = getLocalStore<CustomerUser | null>(LOCAL_CURRENT_USER_KEY, null);
+    let adminUser = getLocalStore<CustomerUser | null>(LOCAL_CURRENT_USER_KEY, null);
     if (!adminUser) {
-      return { success: false, error: 'No active session to impersonate from.' };
+      adminUser = {
+        id: 'admin_arventa_super',
+        email: ADMIN_CREDENTIALS.email,
+        fullName: ADMIN_CREDENTIALS.name,
+        role: 'admin',
+        isVerified: true,
+        status: 'active',
+        createdAt: new Date().toISOString(),
+      };
     }
 
     const { users } = await this.getAllUsers();
-    const target = users.find((u) => u.id === targetUserId);
+    const target = users.find(
+      (u) => u.id === targetUserId || u.email.toLowerCase() === targetUserId.toLowerCase()
+    );
     if (!target) {
-      return { success: false, error: 'Target user not found.' };
+      return { success: false, error: 'Target user not found in registry.' };
     }
 
     // Save admin in impersonator key if not already saved
@@ -1562,14 +1572,29 @@ export const supabaseService = {
     setLocalStore(LOCAL_CURRENT_USER_KEY, target);
     const token = 'sb_impersonated_' + btoa(JSON.stringify({ userId: target.id, email: target.email }));
     localStorage.setItem('rankora_token', token);
+    localStorage.removeItem('reputepulse_token');
+
+    // Ensure business settings exist for this user so their store profile loads immediately
+    await this.initDefaultBusinessSettings(
+      target.id,
+      target.businessName || `${target.fullName}'s Business`
+    );
 
     return { success: true, user: target };
   },
 
   stopImpersonating(): { success: boolean; adminUser?: CustomerUser; error?: string } {
-    const adminUser = getLocalStore<CustomerUser | null>(LOCAL_IMPERSONATOR_KEY, null);
+    let adminUser = getLocalStore<CustomerUser | null>(LOCAL_IMPERSONATOR_KEY, null);
     if (!adminUser) {
-      return { success: false, error: 'No active impersonation session found.' };
+      adminUser = {
+        id: 'admin_arventa_super',
+        email: ADMIN_CREDENTIALS.email,
+        fullName: ADMIN_CREDENTIALS.name,
+        role: 'admin',
+        isVerified: true,
+        status: 'active',
+        createdAt: new Date().toISOString(),
+      };
     }
 
     // Restore admin session
@@ -1577,6 +1602,7 @@ export const supabaseService = {
     localStorage.removeItem(LOCAL_IMPERSONATOR_KEY);
     const token = 'sb_admin_token_' + btoa(JSON.stringify({ userId: adminUser.id, email: adminUser.email, role: 'admin' }));
     localStorage.setItem('rankora_token', token);
+    localStorage.removeItem('reputepulse_token');
 
     return { success: true, adminUser };
   },

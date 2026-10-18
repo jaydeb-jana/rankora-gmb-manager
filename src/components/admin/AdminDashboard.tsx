@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   ShieldCheck,
   Users,
@@ -35,6 +36,7 @@ interface AdminDashboardProps {
 }
 
 export function AdminDashboard({ onUserImpersonated }: AdminDashboardProps = {}) {
+  const navigate = useNavigate();
   const { user, impersonateUser } = useAuth();
   const { showSuccess, showError } = useToast();
 
@@ -162,8 +164,12 @@ export function AdminDashboard({ onUserImpersonated }: AdminDashboardProps = {})
   const handleImpersonate = async (targetUser: CustomerUser) => {
     try {
       await impersonateUser(targetUser);
-      showSuccess(`Logged in as ${targetUser.fullName} (${targetUser.businessName || 'Business'}).`);
-      if (onUserImpersonated) onUserImpersonated();
+      showSuccess(`Logged into ${targetUser.fullName}'s account without password.`);
+      if (onUserImpersonated) {
+        onUserImpersonated();
+      } else {
+        navigate('/');
+      }
     } catch {
       showError('Failed to enter user account.');
     }

@@ -88,11 +88,22 @@ function CustomerPortalContent() {
     if (
       user &&
       (user.role === 'admin' || user.email === 'info@arventaventures.online') &&
+      !impersonatorAdmin &&
       location.pathname === '/'
     ) {
       navigate('/admin');
     }
-  }, [user, location.pathname]);
+  }, [user, impersonatorAdmin, location.pathname, navigate]);
+
+  // If in customer portal (e.g. regular user or active admin impersonation) but route is '/admin', redirect to '/'
+  useEffect(() => {
+    if (
+      (impersonatorAdmin || (user && user.role !== 'admin' && user.email !== 'info@arventaventures.online')) &&
+      (location.pathname === '/admin' || location.pathname === '/admin-panel')
+    ) {
+      navigate('/', { replace: true });
+    }
+  }, [user, impersonatorAdmin, location.pathname, navigate]);
 
   const loadCustomerData = async () => {
     if (!token) return;
@@ -450,6 +461,7 @@ function CustomerPortalContent() {
  */
 function AdminPortalContent() {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-[#f8f9fa] flex flex-col justify-between">
@@ -509,7 +521,7 @@ function AdminPortalContent() {
 
         {/* Pure Admin Control Dashboard */}
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <AdminDashboard />
+          <AdminDashboard onUserImpersonated={() => navigate('/')} />
         </main>
       </div>
 

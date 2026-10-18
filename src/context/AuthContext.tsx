@@ -103,10 +103,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const impersonateUser = async (targetUser: CustomerUser) => {
     const res = await api.impersonateUser(targetUser.id);
     if (res.success && res.user) {
+      const newToken =
+        localStorage.getItem('rankora_token') ||
+        'sb_impersonated_' + btoa(JSON.stringify({ userId: res.user.id, email: res.user.email }));
+      localStorage.setItem('rankora_token', newToken);
+      localStorage.removeItem('reputepulse_token');
+      setToken(newToken);
       setUser(res.user);
-      setImpersonatorAdmin(api.getImpersonatorAdmin());
-      const newToken = localStorage.getItem('rankora_token');
-      if (newToken) setToken(newToken);
+      setImpersonatorAdmin(
+        api.getImpersonatorAdmin() || {
+          id: 'admin_arventa_super',
+          email: 'info@arventaventures.online',
+          fullName: 'Arventa Admin',
+          role: 'admin',
+          isVerified: true,
+          status: 'active',
+          createdAt: new Date().toISOString(),
+        }
+      );
+    } else {
+      throw new Error(res.error || 'Failed to switch into customer account.');
     }
   };
 
