@@ -604,13 +604,13 @@ export function AuthModal({ initialMode = 'login', onSuccess }: AuthModalProps) 
                 pattern="[0-9]*"
                 maxLength={6}
                 required
-                autoFocus
+                autoComplete="one-time-code"
                 value={otpCode}
                 onChange={(e) => {
                   setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6));
                   setErrorMessage('');
                 }}
-                placeholder="······"
+                placeholder=""
                 className="w-full text-center text-3xl font-mono tracking-[0.35em] py-3 bg-[#f8f9fa] border-2 border-[#1a73e8] rounded-xl text-[#202124] focus:outline-none focus:bg-white focus:ring-4 focus:ring-[#1a73e8]/15 shadow-2xs font-bold transition-all"
               />
               {otpCode.length > 0 && (
