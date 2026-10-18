@@ -78,6 +78,9 @@ export interface GenerateDraftOptions {
   businessName: string;
   category: string;
   productsAndServices?: string;
+  services?: string[];
+  selectedServices?: string[];
+  customNotes?: string;
   shopAiDetails?: string;
   reviewWritingRules?: string;
   customerExperience?: string;
@@ -99,14 +102,19 @@ Do NOT use overly formal words, corporate buzzwords, hashtags, or quotation mark
 Follow these review writing guidelines if applicable: ${options.reviewWritingRules || 'Keep it natural, genuine and specific to the service received.'}
 Output ONLY the review text itself, with no introductory or concluding pleasantries.`;
 
+  const activeServices = (options.selectedServices && options.selectedServices.length > 0)
+    ? options.selectedServices.join(', ')
+    : (options.productsAndServices || 'Quality products and services');
+
   const prompt = `Write a ${options.starRating}-star customer review for "${options.businessName}" (${options.category}).
 Key details about the business:
-- Services & Offerings: ${options.productsAndServices || 'High quality products and services'}
+- Services & Offerings experienced: ${activeServices}
 ${options.shopAiDetails ? `- Shop & Business Details: ${options.shopAiDetails}` : ''}
 - Atmosphere / Experience: ${options.customerExperience || 'Clean, welcoming and professional'}
 
 Things I specifically loved and want to mention:
 ${options.highlightChips.length > 0 ? options.highlightChips.map((c) => `- ${c}`).join('\n') : '- Great service and quality'}
+${options.customNotes?.trim() ? `\nCUSTOMER'S PERSONAL NOTES (Enhance and smoothly integrate these specific points): "${options.customNotes.trim()}"` : ''}
 
 Keywords to blend in naturally if appropriate:
 ${(options.customKeywords || []).join(', ')}
@@ -139,13 +147,14 @@ Keep it concise, authentic, friendly, and approximately 2-4 sentences.`;
 
   // Fallback high-quality template if Gemini API key is missing or offline
   const langLower = (options.language || 'English').toLowerCase();
+  const customSnippet = options.customNotes?.trim() ? ` ${options.customNotes.trim()}.` : '';
 
   if (langLower.includes('hindi') || langLower === 'hi') {
     const chipsHindi =
       options.highlightChips.length > 0
         ? `खासकर ${options.highlightChips.slice(0, 2).join(' और ')} बहुत ही बेहतरीन था।`
         : 'यहाँ की सेवा और कस्टमर सपोर्ट वाकई तारीफ के काबिल है।';
-    return `${options.businessName} पर मेरा अनुभव बेहद शानदार रहा! ${chipsHindi} मैं यहाँ दोबारा आना पसंद करूँगा और सभी को ज़रूर रेकमेंड करता हूँ।`;
+    return `${options.businessName} पर मेरा अनुभव बेहद शानदार रहा! ${chipsHindi}${customSnippet} मैं यहाँ दोबारा आना पसंद करूँगा और सभी को ज़रूर रेकमेंड करता हूँ।`;
   }
 
   if (langLower.includes('bengali') || langLower.includes('bangla') || langLower === 'bn') {
@@ -153,22 +162,22 @@ Keep it concise, authentic, friendly, and approximately 2-4 sentences.`;
       options.highlightChips.length > 0
         ? `বিশেষ করে ${options.highlightChips.slice(0, 2).join(' এবং ')} দারুণ লেগেছে।`
         : 'এখানকার সেবা ও ব্যবহার সত্যিই প্রশংসনীয়।';
-    return `${options.businessName}-এ আমার অভিজ্ঞতা অত্যন্ত চমৎকার ছিল! ${chipsBn} ভবিষ্যতে নিশ্চিতভাবে আবার আসব এবং সবাইকে রেকমেন্ড করছি।`;
+    return `${options.businessName}-এ আমার অভিজ্ঞতা অত্যন্ত চমৎকার ছিল! ${chipsBn}${customSnippet} ভবিষ্যতে নিশ্চিতভাবে আবার আসব এবং সবাইকে রেকমেন্ড করছি।`;
   }
 
   if (langLower.includes('marathi') || langLower === 'mr') {
-    return `${options.businessName} येथे माझा अनुभव खूप छान राहिला! उत्तम सेवा आणि दर्जेदार काम. मी नक्कीच इतरांना शिफारस करेन.`;
+    return `${options.businessName} येथे माझा अनुभव खूप छान राहिला! उत्तम सेवा आणि दर्जेदार काम.${customSnippet} मी नक्कीच इतरांना शिफारस करेन.`;
   }
 
   if (langLower.includes('gujarati') || langLower === 'gu') {
-    return `${options.businessName} ખાતે મારો અનુભવ ખૂબ જ ઉત્તમ રહ્યો! સર્વિસ અને ક્વોલિટી ખૂબ જ સારી છે.`;
+    return `${options.businessName} ખાતે મારો અનુભવ ખૂબ જ ઉત્તમ રહ્યો! સર્વિસ અને ક્વોલિટી ખૂબ જ સારી છે.${customSnippet}`;
   }
 
   const chipMentions =
     options.highlightChips.length > 0
       ? `The ${options.highlightChips.slice(0, 2).join(' and ')} really stood out to me.`
       : 'The attention to detail and care were fantastic.';
-  return `I had a wonderful experience at ${options.businessName}! ${chipMentions} Definitely coming back again and highly recommend them to anyone looking for great ${options.category?.toLowerCase() || 'service'}.`;
+  return `I had a wonderful experience at ${options.businessName}! ${chipMentions}${customSnippet} Definitely coming back again and highly recommend them to anyone looking for great ${options.category?.toLowerCase() || 'service'}.`;
 }
 
 export interface GenerateReplyOptions {

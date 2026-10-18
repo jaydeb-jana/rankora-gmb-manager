@@ -267,6 +267,8 @@ export const api = {
     starRating: number;
     highlightChips: string[];
     language?: string;
+    selectedServices?: string[];
+    customNotes?: string;
   }): Promise<{ success: boolean; draft: string; error?: string }> {
     let biz: any = null;
     if (data.slug) {
@@ -282,6 +284,9 @@ export const api = {
         businessName: data.businessName || biz?.businessName || 'Business',
         category: data.category || biz?.category || 'Retail Store',
         productsAndServices: biz?.productsAndServices,
+        services: biz?.services,
+        selectedServices: data.selectedServices,
+        customNotes: data.customNotes,
         shopAiDetails: biz?.shopAiDetails,
         reviewWritingRules: biz?.reviewWritingRules,
         customerExperience: biz?.customerExperience,

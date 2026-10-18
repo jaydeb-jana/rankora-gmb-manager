@@ -49,7 +49,6 @@ export function AdminDashboard({ onUserImpersonated }: AdminDashboardProps = {})
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'suspended'>('all');
 
   // Modals state
-  const [editingUser, setEditingUser] = useState<CustomerUser | null>(null);
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState<boolean>(false);
   const [deletingUser, setDeletingUser] = useState<CustomerUser | null>(null);
 
@@ -170,40 +169,6 @@ export function AdminDashboard({ onUserImpersonated }: AdminDashboardProps = {})
     }
   };
 
-  const handleOpenEditUser = (targetUser: CustomerUser) => {
-    setEditingUser(targetUser);
-    setUserFormData({
-      fullName: targetUser.fullName,
-      email: targetUser.email,
-      mobileNumber: targetUser.mobileNumber,
-      businessName: targetUser.businessName || '',
-      password: '',
-      planId: targetUser.planId || 'pro-plan',
-      status: targetUser.status || 'active',
-    });
-  };
-
-  const handleSaveUserEdit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingUser) return;
-
-    const res = await api.updateUser(editingUser.id, {
-      fullName: userFormData.fullName.trim(),
-      email: userFormData.email.trim().toLowerCase(),
-      mobileNumber: userFormData.mobileNumber.trim(),
-      businessName: userFormData.businessName.trim(),
-      planId: userFormData.planId,
-      status: userFormData.status,
-    });
-
-    if (res.success) {
-      showSuccess('User account updated successfully.');
-      setEditingUser(null);
-      loadUsers();
-    } else {
-      showError(res.error || 'Failed to update user.');
-    }
-  };
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -677,15 +642,6 @@ export function AdminDashboard({ onUserImpersonated }: AdminDashboardProps = {})
                                   </button>
                                 )}
 
-                                {/* Edit User */}
-                                <button
-                                  type="button"
-                                  onClick={() => handleOpenEditUser(u)}
-                                  title="Edit User Details"
-                                  className="p-1.5 bg-white hover:bg-[#f1f3f4] border border-[#dadce0] text-[#3c4043] rounded-lg transition-all cursor-pointer"
-                                >
-                                  <Edit className="w-3.5 h-3.5" />
-                                </button>
 
                                 {/* Toggle Suspend */}
                                 {!isSuperAdmin && (
@@ -907,127 +863,7 @@ export function AdminDashboard({ onUserImpersonated }: AdminDashboardProps = {})
         )}
       </div>
 
-      {/* ---------------- MODAL: EDIT USER ---------------- */}
-      {editingUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl border border-[#dadce0] shadow-2xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div className="p-5 border-b border-[#dadce0] flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-[#e8f0fe] text-[#1a73e8] flex items-center justify-center">
-                  <Edit className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-sm text-[#202124]">Edit User Profile</h3>
-                  <p className="text-[11px] text-[#5f6368]">
-                    Modify personal, business, or plan details for this account.
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setEditingUser(null)}
-                className="text-[#5f6368] hover:text-[#202124]"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
 
-            <form onSubmit={handleSaveUserEdit} className="p-5 space-y-4 text-xs">
-              <div>
-                <label className="font-bold text-[#202124] block mb-1">Owner Full Name</label>
-                <input
-                  type="text"
-                  required
-                  value={userFormData.fullName}
-                  onChange={(e) => setUserFormData({ ...userFormData, fullName: e.target.value })}
-                  className="w-full px-3.5 py-2 border border-[#dadce0] rounded-xl text-xs focus:outline-none focus:border-[#1a73e8]"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-[#202124] block mb-1">Email Address</label>
-                <input
-                  type="email"
-                  required
-                  value={userFormData.email}
-                  onChange={(e) => setUserFormData({ ...userFormData, email: e.target.value })}
-                  className="w-full px-3.5 py-2 border border-[#dadce0] rounded-xl text-xs focus:outline-none focus:border-[#1a73e8]"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-[#202124] block mb-1">Mobile Number</label>
-                <input
-                  type="text"
-                  value={userFormData.mobileNumber}
-                  onChange={(e) => setUserFormData({ ...userFormData, mobileNumber: e.target.value })}
-                  className="w-full px-3.5 py-2 border border-[#dadce0] rounded-xl text-xs focus:outline-none focus:border-[#1a73e8]"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-[#202124] block mb-1">Business Store Name</label>
-                <input
-                  type="text"
-                  value={userFormData.businessName}
-                  onChange={(e) => setUserFormData({ ...userFormData, businessName: e.target.value })}
-                  className="w-full px-3.5 py-2 border border-[#dadce0] rounded-xl text-xs focus:outline-none focus:border-[#1a73e8]"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-bold text-[#202124] block mb-1">Assigned Plan</label>
-                  <select
-                    value={userFormData.planId}
-                    onChange={(e) => setUserFormData({ ...userFormData, planId: e.target.value })}
-                    className="w-full px-3 py-2 border border-[#dadce0] rounded-xl text-xs focus:outline-none focus:border-[#1a73e8]"
-                  >
-                    {plans.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="font-bold text-[#202124] block mb-1">Account Status</label>
-                  <select
-                    value={userFormData.status}
-                    onChange={(e) =>
-                      setUserFormData({
-                        ...userFormData,
-                        status: e.target.value as 'active' | 'suspended',
-                      })
-                    }
-                    className="w-full px-3 py-2 border border-[#dadce0] rounded-xl text-xs focus:outline-none focus:border-[#1a73e8]"
-                  >
-                    <option value="active">Active</option>
-                    <option value="suspended">Suspended</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t border-[#dadce0] flex items-center justify-end gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setEditingUser(null)}
-                  className="px-4 py-2 border border-[#dadce0] text-[#3c4043] rounded-xl hover:bg-[#f1f3f4]"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 bg-[#1a73e8] hover:bg-[#1557b0] text-white rounded-xl font-bold shadow-xs"
-                >
-                  Save Changes
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* ---------------- MODAL: ADD USER ---------------- */}
       {isAddUserModalOpen && (
