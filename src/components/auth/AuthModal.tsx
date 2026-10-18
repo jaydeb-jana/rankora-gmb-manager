@@ -156,8 +156,9 @@ export function AuthModal({ initialMode = 'login', onSuccess }: AuthModalProps) 
     e.preventDefault();
     setErrorMessage('');
 
-    if (!otpCode || otpCode.trim().length !== 6) {
-      setErrorMessage('Please enter the full 6-digit verification code.');
+    const code = otpCode.trim();
+    if (!code || (code.length !== 6 && code.length !== 8)) {
+      setErrorMessage('Please enter the complete verification code.');
       return;
     }
 
@@ -588,30 +589,30 @@ export function AuthModal({ initialMode = 'login', onSuccess }: AuthModalProps) 
           <div className="p-3.5 bg-[#e8f0fe] border border-[#d2e3fc] rounded-xl text-xs text-[#1a73e8] flex items-start gap-2.5">
             <Mail className="w-4 h-4 shrink-0 mt-0.5 text-[#1a73e8]" />
             <div className="leading-relaxed">
-              A 6-digit verification code has been dispatched to <strong className="font-semibold text-[#174ea6]">{email}</strong> via Gmail. Please check your inbox and spam folder.
+              A verification code has been dispatched to <strong className="font-semibold text-[#174ea6]">{email}</strong> via Gmail. Please check your inbox and spam folder.
             </div>
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-[#5f6368] mb-1.5 text-center">
-              Enter 6-digit verification code received by email
+              Enter verification code received by email
             </label>
 
-            <div className="relative max-w-[270px] mx-auto">
+            <div className="relative max-w-[320px] mx-auto">
               <input
                 type="text"
                 inputMode="numeric"
                 pattern="[0-9]*"
-                maxLength={6}
+                maxLength={8}
                 required
                 autoComplete="one-time-code"
                 value={otpCode}
                 onChange={(e) => {
-                  setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6));
+                  setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 8));
                   setErrorMessage('');
                 }}
                 placeholder=""
-                className="w-full text-center text-3xl font-mono tracking-[0.35em] py-3 bg-[#f8f9fa] border-2 border-[#1a73e8] rounded-xl text-[#202124] focus:outline-none focus:bg-white focus:ring-4 focus:ring-[#1a73e8]/15 shadow-2xs font-bold transition-all"
+                className="w-full text-center text-2xl sm:text-3xl font-mono tracking-[0.25em] py-3 bg-[#f8f9fa] border-2 border-[#1a73e8] rounded-xl text-[#202124] focus:outline-none focus:bg-white focus:ring-4 focus:ring-[#1a73e8]/15 shadow-2xs font-bold transition-all"
               />
               {otpCode.length > 0 && (
                 <button
@@ -631,7 +632,7 @@ export function AuthModal({ initialMode = 'login', onSuccess }: AuthModalProps) 
 
           <button
             type="submit"
-            disabled={loading || otpCode.length !== 6}
+            disabled={loading || (otpCode.length !== 6 && otpCode.length !== 8)}
             className="w-full py-2.5 px-4 bg-[#1a73e8] hover:bg-[#1557b0] active:bg-[#174ea6] disabled:opacity-50 text-white rounded-lg font-semibold text-sm shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
           >
             {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'Confirm & Complete'}
