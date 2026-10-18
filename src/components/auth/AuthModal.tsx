@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Lock,
   Mail,
@@ -40,12 +40,116 @@ export function AuthModal({ initialMode = 'login', onSuccess }: AuthModalProps) 
   const [rememberMe, setRememberMe] = useState(true);
 
   const [otpCode, setOtpCode] = useState('');
+  const [otpLength, setOtpLength] = useState<number>(8);
+  const [digits, setDigits] = useState<string[]>(Array(8).fill(''));
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
   const [otpPurpose, setOtpPurpose] = useState<'registration' | 'password_reset'>('registration');
   const [cooldown, setCooldown] = useState(60);
   const [canResend, setCanResend] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+
+  // Keep otpCode synced with digits
+  useEffect(() => {
+    const full = digits.slice(0, otpLength).join('');
+    setOtpCode(full);
+  }, [digits, otpLength]);
+
+  // Auto-focus first digit field when OTP verification appears
+  useEffect(() => {
+    if (mode === 'otp_verify') {
+      setTimeout(() => {
+        inputRefs.current[0]?.focus();
+      }, 100);
+    }
+  }, [mode]);
+
+  const handleSwitchLength = (len: number) => {
+    setOtpLength(len);
+    setDigits((prev) => {
+      const next = Array(len).fill('');
+      for (let i = 0; i < len; i++) {
+        next[i] = prev[i] || '';
+      }
+      return next;
+    });
+    setErrorMessage('');
+    setTimeout(() => {
+      inputRefs.current[0]?.focus();
+    }, 50);
+  };
+
+  const applyDigitsString = (str: string, startIndex = 0) => {
+    const clean = str.replace(/\D/g, '');
+    if (!clean) return;
+
+    let targetLen = otpLength;
+    if (startIndex === 0) {
+      if (clean.length === 6) targetLen = 6;
+      else if (clean.length === 7) targetLen = 7;
+      else if (clean.length >= 8) targetLen = 8;
+      setOtpLength(targetLen);
+    }
+
+    const nextDigits = Array(targetLen).fill('');
+    for (let i = 0; i < targetLen; i++) {
+      if (i >= startIndex && i - startIndex < clean.length) {
+        nextDigits[i] = clean[i - startIndex];
+      } else if (i < startIndex) {
+        nextDigits[i] = digits[i] || '';
+      }
+    }
+    setDigits(nextDigits);
+    setErrorMessage('');
+
+    const nextIndex = Math.min(startIndex + clean.length, targetLen - 1);
+    setTimeout(() => {
+      inputRefs.current[nextIndex]?.focus();
+    }, 40);
+  };
+
+  const handleDigitChange = (index: number, val: string) => {
+    const clean = val.replace(/\D/g, '');
+    if (!clean) {
+      setDigits((prev) => {
+        const next = [...prev];
+        next[index] = '';
+        return next;
+      });
+      return;
+    }
+
+    if (clean.length > 1) {
+      applyDigitsString(clean, index);
+      return;
+    }
+
+    const char = clean.slice(-1);
+    setDigits((prev) => {
+      const next = [...prev];
+      next[index] = char;
+      return next;
+    });
+    setErrorMessage('');
+
+    if (index < otpLength - 1 && char) {
+      inputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace') {
+      if (!digits[index] && index > 0) {
+        inputRefs.current[index - 1]?.focus();
+      }
+    } else if (e.key === 'ArrowLeft' && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    } else if (e.key === 'ArrowRight' && index < otpLength - 1) {
+      inputRefs.current[index + 1]?.focus();
+    }
+  };
 
   const hasMinLength = password.length >= 8;
   const hasNumber = /\d/.test(password);
@@ -157,8 +261,8 @@ export function AuthModal({ initialMode = 'login', onSuccess }: AuthModalProps) 
     setErrorMessage('');
 
     const code = otpCode.trim();
-    if (!code || (code.length !== 6 && code.length !== 8)) {
-      setErrorMessage('Please enter the complete verification code.');
+    if (!code || code.length < 6 || code.length > 8) {
+      setErrorMessage(`Please enter the complete ${otpLength}-digit verification code.`);
       return;
     }
 
@@ -302,7 +406,7 @@ export function AuthModal({ initialMode = 'login', onSuccess }: AuthModalProps) 
         <p className="text-xs text-[#5f6368] mt-1">
           {mode === 'login' && 'to continue to Google Business Profile Manager'}
           {mode === 'register' && 'with verified email OTP authentication'}
-          {mode === 'otp_verify' && `Enter the 6-digit code sent to ${email}`}
+          {mode === 'otp_verify' && `Enter the verification code sent to ${email}`}
           {mode === 'forgot_password' && 'Enter your registered email address'}
           {mode === 'reset_password' && 'Create a strong new password for your account'}
         </p>
@@ -594,45 +698,97 @@ export function AuthModal({ initialMode = 'login', onSuccess }: AuthModalProps) 
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[#5f6368] mb-1.5 text-center">
-              Enter verification code received by email
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-semibold text-[#5f6368]">
+                Enter {otpLength}-digit verification code:
+              </label>
 
-            <div className="relative max-w-[320px] mx-auto">
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                maxLength={8}
-                required
-                autoComplete="one-time-code"
-                value={otpCode}
-                onChange={(e) => {
-                  setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 8));
-                  setErrorMessage('');
-                }}
-                placeholder=""
-                className="w-full text-center text-2xl sm:text-3xl font-mono tracking-[0.25em] py-3 bg-[#f8f9fa] border-2 border-[#1a73e8] rounded-xl text-[#202124] focus:outline-none focus:bg-white focus:ring-4 focus:ring-[#1a73e8]/15 shadow-2xs font-bold transition-all"
-              />
-              {otpCode.length > 0 && (
+              {/* Digit count switcher tabs */}
+              <div className="inline-flex items-center p-0.5 bg-[#f1f3f4] rounded-lg text-[11px] font-medium border border-[#dadce0]/60">
                 <button
                   type="button"
-                  onClick={() => setOtpCode('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-[#5f6368] hover:text-[#202124] px-1.5 py-0.5 rounded bg-[#e8eaed] cursor-pointer"
+                  onClick={() => handleSwitchLength(8)}
+                  className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
+                    otpLength === 8
+                      ? 'bg-white text-[#1a73e8] font-bold shadow-2xs'
+                      : 'text-[#5f6368] hover:text-[#202124]'
+                  }`}
                 >
-                  Clear
+                  8 Digits
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSwitchLength(7)}
+                  className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
+                    otpLength === 7
+                      ? 'bg-white text-[#1a73e8] font-bold shadow-2xs'
+                      : 'text-[#5f6368] hover:text-[#202124]'
+                  }`}
+                >
+                  7 Digits
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSwitchLength(6)}
+                  className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
+                    otpLength === 6
+                      ? 'bg-white text-[#1a73e8] font-bold shadow-2xs'
+                      : 'text-[#5f6368] hover:text-[#202124]'
+                  }`}
+                >
+                  6 Digits
+                </button>
+              </div>
+            </div>
+
+            {/* Individual Digit Fields (Boxes) */}
+            <div className="flex items-center justify-center gap-1 sm:gap-1.5 my-3">
+              {Array.from({ length: otpLength }).map((_, idx) => (
+                <input
+                  key={idx}
+                  ref={(el) => (inputRefs.current[idx] = el)}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={1}
+                  autoComplete={idx === 0 ? 'one-time-code' : 'off'}
+                  value={digits[idx] || ''}
+                  onChange={(e) => handleDigitChange(idx, e.target.value)}
+                  onKeyDown={(e) => handleKeyDown(idx, e)}
+                  onPaste={(e) => {
+                    e.preventDefault();
+                    const text = e.clipboardData.getData('text');
+                    applyDigitsString(text, idx);
+                  }}
+                  className={`w-8 h-11 sm:w-10 sm:h-12 text-center text-lg sm:text-xl font-mono font-bold rounded-xl border-2 transition-all outline-none ${
+                    digits[idx]
+                      ? 'border-[#1a73e8] bg-white text-[#202124] shadow-2xs'
+                      : 'border-[#dadce0] bg-[#f8f9fa] text-[#202124] focus:border-[#1a73e8] focus:bg-white focus:ring-4 focus:ring-[#1a73e8]/15'
+                  }`}
+                />
+              ))}
+            </div>
+
+            <div className="flex items-center justify-between text-[11px] text-[#5f6368] mt-2 px-1">
+              <span>Code is valid for 10 minutes</span>
+              {digits.some(Boolean) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDigits(Array(otpLength).fill(''));
+                    inputRefs.current[0]?.focus();
+                  }}
+                  className="text-xs text-[#d93025] hover:underline cursor-pointer"
+                >
+                  Clear all
                 </button>
               )}
             </div>
-
-            <p className="text-[11px] text-center text-[#5f6368] mt-2">
-              Code is valid for 10 minutes. Sent securely via email.
-            </p>
           </div>
 
           <button
             type="submit"
-            disabled={loading || (otpCode.length !== 6 && otpCode.length !== 8)}
+            disabled={loading || digits.slice(0, otpLength).join('').length !== otpLength}
             className="w-full py-2.5 px-4 bg-[#1a73e8] hover:bg-[#1557b0] active:bg-[#174ea6] disabled:opacity-50 text-white rounded-lg font-semibold text-sm shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
           >
             {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'Confirm & Complete'}
