@@ -325,7 +325,7 @@ export function AuthModal({ initialMode = 'login', onSuccess }: AuthModalProps) 
     setLoading(true);
     try {
       const res = await api.forgotPassword(email);
-      showSuccess(res.message);
+      showSuccess(res.message || 'Verification code sent to your email.');
       setOtpPurpose('password_reset');
       setCooldown(60);
       setMode('otp_verify');
@@ -746,7 +746,9 @@ export function AuthModal({ initialMode = 'login', onSuccess }: AuthModalProps) 
               {Array.from({ length: otpLength }).map((_, idx) => (
                 <input
                   key={idx}
-                  ref={(el) => (inputRefs.current[idx] = el)}
+                  ref={(el) => {
+                    inputRefs.current[idx] = el;
+                  }}
                   type="text"
                   inputMode="numeric"
                   pattern="[0-9]*"

@@ -76,6 +76,109 @@ export const DEFAULT_PRICING_PLANS: PricingPlan[] = [
   },
 ];
 
+export const REAL_INITIAL_USERS: Array<{
+  user: CustomerUser & { password?: string };
+  settings?: Partial<BusinessSettings>;
+  googleAccount?: Partial<GoogleBusinessAccount>;
+}> = [
+  {
+    user: {
+      id: 'usr_25908e14-d2dd-41cf-9454-5aed516228d0',
+      email: 'help.ecomart01@gmail.com',
+      fullName: 'Jaydeb Jana',
+      mobileNumber: '+91 7872490719',
+      isVerified: true,
+      role: 'user',
+      status: 'active',
+      planId: 'ultra-plan',
+      businessName: 'Arventa Ventures',
+      createdAt: '2026-10-12T18:22:37.071Z',
+    },
+    settings: {
+      id: 'biz-usr_25908e14-d2dd-41cf-9454-5aed516228d0',
+      userId: 'usr_25908e14-d2dd-41cf-9454-5aed516228d0',
+      businessName: 'Arventa Ventures',
+      category: 'Digital marketing agency',
+      googleReviewUrl: 'https://g.page/r/CbOgJVgsB5vAEAE/review',
+      customSlug: 'arventa-ventures',
+      brandTone: 'luxurious',
+      languagePreferences: [{ code: 'en', name: 'English', percentage: 100 }],
+      autoReplyEnabled: true,
+      autoReplyMode: 'approval',
+      minStarRating: 4,
+      responseDelayMinutes: 5,
+    },
+    googleAccount: {
+      connected: true,
+      accountId: 'accounts/google_29a9274e',
+      accountName: 'Authorized Google Business Account',
+      locationName: 'Verified Google Business Storefront',
+      rating: 4.9,
+      reviewCount: 46,
+    },
+  },
+  {
+    user: {
+      id: 'usr_151b4c83-384f-4fcb-9769-89012f000aab',
+      email: 'janajaydeb36@gmail.com',
+      fullName: 'Jaydeb Jana',
+      mobileNumber: '+91 8001608004',
+      isVerified: true,
+      role: 'user',
+      status: 'active',
+      planId: 'pro-plan',
+      businessName: "Jaydeb Jana's Business",
+      createdAt: '2026-10-16T05:29:22.584Z',
+    },
+    settings: {
+      id: 'biz-usr_151b4c83-384f-4fcb-9769-89012f000aab',
+      userId: 'usr_151b4c83-384f-4fcb-9769-89012f000aab',
+      businessName: "Jaydeb Jana's Business",
+      category: 'Local Service & Retail',
+      customSlug: 'jaydeb-jana-0aab',
+      brandTone: 'friendly',
+      languagePreferences: [{ code: 'en', name: 'English', percentage: 100 }],
+      autoReplyEnabled: false,
+      autoReplyMode: 'approval',
+      minStarRating: 4,
+      responseDelayMinutes: 5,
+    },
+    googleAccount: {
+      connected: false,
+    },
+  },
+  {
+    user: {
+      id: 'usr_sohagi_fashions',
+      email: 'sohagifashions@gmail.com',
+      fullName: 'Sohagi Fashions',
+      mobileNumber: '+91 7872490719',
+      isVerified: true,
+      role: 'user',
+      status: 'active',
+      planId: 'pro-plan',
+      businessName: 'Sohagi Fashions',
+      createdAt: '2026-10-14T10:15:00.000Z',
+    },
+    settings: {
+      id: 'biz-usr_sohagi_fashions',
+      userId: 'usr_sohagi_fashions',
+      businessName: 'Sohagi Fashions',
+      category: 'Fashion & Clothing Store',
+      customSlug: 'sohagi-fashions',
+      brandTone: 'friendly',
+      languagePreferences: [{ code: 'en', name: 'English', percentage: 100 }],
+      autoReplyEnabled: true,
+      autoReplyMode: 'approval',
+      minStarRating: 4,
+      responseDelayMinutes: 5,
+    },
+    googleAccount: {
+      connected: false,
+    },
+  },
+];
+
 function purgeDemoUsersIfPresent(): void {
   try {
     const raw = localStorage.getItem(LOCAL_USERS_KEY);
@@ -98,6 +201,37 @@ function purgeDemoUsersIfPresent(): void {
     }
   } catch (e) {
     console.warn('Purge demo users notice:', e);
+  }
+}
+
+function syncRealUsers(): void {
+  try {
+    purgeDemoUsersIfPresent();
+    const rawUsers = localStorage.getItem(LOCAL_USERS_KEY);
+    const users = rawUsers ? JSON.parse(rawUsers) : {};
+    const allSettings = getLocalStore<Record<string, any>>(LOCAL_SETTINGS_KEY, {});
+    const googleAccounts = getLocalStore<Record<string, any>>(LOCAL_GOOGLE_KEY, {});
+
+    REAL_INITIAL_USERS.forEach(({ user, settings, googleAccount }) => {
+      if (!users[user.email]) {
+        users[user.email] = user;
+      }
+      if (settings && !allSettings[user.id]) {
+        allSettings[user.id] = {
+          ...settings,
+          updatedAt: settings.updatedAt || new Date().toISOString(),
+        };
+      }
+      if (googleAccount && !googleAccounts[user.id]) {
+        googleAccounts[user.id] = googleAccount;
+      }
+    });
+
+    setLocalStore(LOCAL_USERS_KEY, users);
+    setLocalStore(LOCAL_SETTINGS_KEY, allSettings);
+    setLocalStore(LOCAL_GOOGLE_KEY, googleAccounts);
+  } catch (e) {
+    console.warn('Sync real users notice:', e);
   }
 }
 
@@ -383,6 +517,7 @@ export const supabaseService = {
         return { error: 'Invalid password for Super Admin account. Please check your credentials.' };
       }
 
+      syncRealUsers();
       const adminUser: CustomerUser = {
         id: 'admin_arventa_super',
         email: ADMIN_CREDENTIALS.email,
@@ -410,8 +545,8 @@ export const supabaseService = {
     }
 
     try {
-      // Clean any stale demo users if present
-      purgeDemoUsersIfPresent();
+      // Sync real accounts
+      syncRealUsers();
       const users = getLocalStore<Record<string, any>>(LOCAL_USERS_KEY, {});
       const user = users[email];
 
@@ -1111,7 +1246,7 @@ export const supabaseService = {
   },
 
   async getAllUsers(): Promise<{ users: CustomerUser[] }> {
-    purgeDemoUsersIfPresent();
+    syncRealUsers();
     const realUsersMap: Record<string, CustomerUser> = {};
 
     // 1. Fetch real registered users from Supabase PostgreSQL profiles table

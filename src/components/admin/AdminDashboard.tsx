@@ -347,7 +347,10 @@ export function AdminDashboard({ onUserImpersonated }: AdminDashboardProps = {})
           <div className="flex items-center gap-3 shrink-0">
             <button
               type="button"
-              onClick={loadUsers}
+              onClick={async () => {
+                await Promise.all([loadUsers(), loadPlans()]);
+                showSuccess('All user records and plans synchronized.');
+              }}
               title="Refresh Data"
               className="px-3.5 py-2.5 bg-white/15 hover:bg-white/25 text-white rounded-xl text-xs font-bold transition-all cursor-pointer border border-white/20 flex items-center gap-2"
             >

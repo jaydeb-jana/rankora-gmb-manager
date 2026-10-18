@@ -525,7 +525,7 @@ export function BusinessSettingsTab({
             </a>
           ) : (
             <span className="text-xs font-medium text-[#b06000] inline-flex items-center gap-1.5 px-3 py-1 bg-[#fef7e0] rounded-full border border-[#feefc3] shrink-0 select-none">
-              <span>👉 লিংক যোগ করা বাকি</span>
+              <span>👉 Review Link Required</span>
             </span>
           )}
         </div>
@@ -539,14 +539,14 @@ export function BusinessSettingsTab({
             <div className="flex-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <h4 className="text-sm font-bold text-[#b06000]">
-                  এখানে আপনার জি এম বি প্রোফাইল রিভিউ লিংক দিন
+                  Enter Your Google Business (GMB) Review Link Here
                 </h4>
                 <span className="text-[10px] font-bold bg-[#f29900] text-white px-2 py-0.5 rounded-full uppercase tracking-wider">
                   Important Step
                 </span>
               </div>
               <p className="text-xs text-[#784700] mt-0.5 leading-relaxed">
-                আপনার গুগল বিজনেস প্রোফাইলের (GMB) রিভিউ লিংকটি নিচের বক্সে পেস্ট করুন যাতে গ্রাহকরা সরাসরি গুগল ম্যাপে ৫-স্টার রিভিউ দিতে পারেন।
+                Paste your direct Google Maps or Google Business Profile review link below so customers can leave 5-star ratings directly.
               </p>
             </div>
           </div>
@@ -559,7 +559,7 @@ export function BusinessSettingsTab({
             </label>
             {!googleReviewUrl && (
               <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#b06000] bg-[#fef7e0] px-2 py-0.5 rounded-full border border-[#f9ab00]/40 animate-pulse">
-                <span>👇 এখানে আপনার লিংক পেস্ট করুন</span>
+                <span>👇 Paste your review link here</span>
               </span>
             )}
           </div>
@@ -572,7 +572,7 @@ export function BusinessSettingsTab({
               type="url"
               value={googleReviewUrl}
               onChange={(e) => setGoogleReviewUrl(e.target.value)}
-              placeholder="https://search.google.com/local/writereview?placeid=... অথবা https://g.page/r/..."
+              placeholder="https://search.google.com/local/writereview?placeid=... or https://g.page/r/..."
               className={`w-full pl-10 pr-4 py-2.5 bg-white rounded-xl text-sm text-[#202124] focus:outline-none transition-all shadow-2xs ${
                 !googleReviewUrl
                   ? 'border-2 border-[#f9ab00] bg-[#fffdfa] focus:border-[#e37400] focus:ring-4 focus:ring-[#f9ab00]/20'
@@ -584,7 +584,7 @@ export function BusinessSettingsTab({
             <span>Enter your Google Business Profile review link or Google Maps write-review URL.</span>
             {!googleReviewUrl && (
               <span className="text-[11px] font-medium text-[#b06000]">
-                Tip: Google Maps বা Search থেকে "Ask for reviews" অপশনে ক্লিক করে শর্ট লিংকটি কপি করুন।
+                Tip: In Google Maps or Google Search, click "Ask for reviews" and copy your direct short link.
               </span>
             )}
           </p>
