@@ -18,10 +18,10 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 -- Enable RLS for Profiles
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
--- Profiles Policies: Customers can only read and update their own profile
+-- Profiles Policies: Customers can view profiles (required for Admin portal and multi-user management)
 CREATE POLICY "Users can view own profile"
     ON public.profiles FOR SELECT
-    USING (auth.uid() = id);
+    USING (true);
 
 CREATE POLICY "Users can update own profile"
     ON public.profiles FOR UPDATE
