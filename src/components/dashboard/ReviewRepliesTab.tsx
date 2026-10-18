@@ -41,6 +41,7 @@ export function ReviewRepliesTab({
   const [languages, setLanguages] = useState<LanguagePreference[]>([]);
 
   const [savingConfig, setSavingConfig] = useState(false);
+  const [savedStatus, setSavedStatus] = useState<'saved' | 'saving' | 'idle'>('saved');
 
   // Auto-resize refs for textareas
   const shopDetailsRef = useRef<HTMLTextAreaElement>(null);
@@ -52,33 +53,38 @@ export function ReviewRepliesTab({
     el.style.height = `${Math.max(el.scrollHeight, 110)}px`;
   };
 
-  const lastLoadedIdRef = useRef<string | null>(null);
+  const isInitializedRef = useRef(false);
+  const isDirtyRef = useRef(false);
 
-  // Sync initial fields from settings once on mount or when a different settings ID loads
+  // Sync initial fields from settings once on mount or when settings change
   useEffect(() => {
-    if (settings && lastLoadedIdRef.current !== settings.id) {
-      lastLoadedIdRef.current = settings.id;
-      if (settings.services && Array.isArray(settings.services)) {
-        const clean = settings.services.filter(
-          (s) => s !== 'Computer Repair' && s !== 'Gaming PC Build'
-        );
-        setServicesList(clean);
+    if (!settings) return;
+
+    if (!isInitializedRef.current || !isDirtyRef.current) {
+      isInitializedRef.current = true;
+
+      // 1. Services
+      if (settings.services && Array.isArray(settings.services) && settings.services.length > 0) {
+        setServicesList(settings.services);
       } else if (settings.productsAndServices) {
         const parsed = settings.productsAndServices
           .split(/[,;\n]+/)
           .map((s) => s.trim())
-          .filter((s) => Boolean(s) && s !== 'Computer Repair' && s !== 'Gaming PC Build');
+          .filter(Boolean);
         setServicesList(parsed);
       } else {
         setServicesList([]);
       }
 
-      const initialShopDetails = settings.shopAiDetails || '';
-      setShopAiDetails(initialShopDetails);
+      // 2. Shop AI Details
+      const details = settings.shopAiDetails || settings.customerExperience || '';
+      setShopAiDetails(details);
 
-      const initialRules = settings.reviewStyleAndRules || settings.reviewWritingRules || '';
-      setReviewStyleAndRules(initialRules);
+      // 3. Review Style & Rules
+      const rules = settings.reviewStyleAndRules || settings.reviewWritingRules || '';
+      setReviewStyleAndRules(rules);
 
+      // 4. Languages
       if (
         settings.languagePreferences &&
         Array.isArray(settings.languagePreferences) &&
@@ -105,7 +111,7 @@ export function ReviewRepliesTab({
         ]);
       }
     }
-  }, [settings]);
+  }, [settings?.id, settings?.updatedAt]);
 
   // Adjust height on initial render and content update
   useEffect(() => {
@@ -118,27 +124,55 @@ export function ReviewRepliesTab({
 
   // Service Management (Direct Type & Add, auto-saves immediately)
   const handleAddService = async () => {
-    const s = newServiceInput.trim();
-    if (!s) return;
-    if (servicesList.some((existing) => existing.toLowerCase() === s.toLowerCase())) {
-      showError(`"${s}" is already in your services list.`);
+    const raw = newServiceInput.trim();
+    if (!raw) return;
+
+    // Split by comma or semicolon if multiple services were entered
+    const items = raw
+      .split(/[,;\n]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    if (items.length === 0) return;
+
+    const newItems: string[] = [];
+    items.forEach((item) => {
+      if (
+        !servicesList.some((existing) => existing.toLowerCase() === item.toLowerCase()) &&
+        !newItems.some((existing) => existing.toLowerCase() === item.toLowerCase())
+      ) {
+        newItems.push(item);
+      }
+    });
+
+    if (newItems.length === 0) {
+      showError('Entered service is already in your active services list.');
       return;
     }
-    const updated = [...servicesList, s];
+
+    const updated = [...servicesList, ...newItems];
     setServicesList(updated);
     setNewServiceInput('');
-    showSuccess(`Added "${s}" to services.`);
+    setSavedStatus('saving');
+    showSuccess(newItems.length === 1 ? `Added "${newItems[0]}".` : `Added ${newItems.length} services.`);
 
     try {
       const res = await api.updateBusinessSettings({
         services: updated,
         productsAndServices: updated.join(', '),
+        shopAiDetails: shopAiDetails.trim(),
+        customerExperience: shopAiDetails.trim(),
+        reviewStyleAndRules: reviewStyleAndRules.trim(),
+        reviewWritingRules: reviewStyleAndRules.trim(),
+        languagePreferences: languages,
       });
       if (res.settings) {
         onUpdateSettings(res.settings);
       }
+      setSavedStatus('saved');
     } catch (err) {
       console.warn('Auto-save service notice:', err);
+      setSavedStatus('idle');
     }
   };
 
@@ -146,24 +180,80 @@ export function ReviewRepliesTab({
     const removedItem = servicesList[indexToRemove];
     const updated = servicesList.filter((_, idx) => idx !== indexToRemove);
     setServicesList(updated);
+    setSavedStatus('saving');
     showSuccess(`Removed "${removedItem}".`);
 
     try {
       const res = await api.updateBusinessSettings({
         services: updated,
         productsAndServices: updated.join(', '),
+        shopAiDetails: shopAiDetails.trim(),
+        customerExperience: shopAiDetails.trim(),
+        reviewStyleAndRules: reviewStyleAndRules.trim(),
+        reviewWritingRules: reviewStyleAndRules.trim(),
+        languagePreferences: languages,
       });
       if (res.settings) {
         onUpdateSettings(res.settings);
       }
+      setSavedStatus('saved');
     } catch (err) {
       console.warn('Auto-save remove service notice:', err);
+      setSavedStatus('idle');
     }
   };
 
-  // Save Settings
+  // Debounced auto-save for description inputs
+  const debounceTimerRef = useRef<any>(null);
+  const triggerDebouncedAutoSave = (updatedShopDetails: string, updatedRules: string) => {
+    isDirtyRef.current = true;
+    setSavedStatus('saving');
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+
+    debounceTimerRef.current = setTimeout(async () => {
+      try {
+        const res = await api.updateBusinessSettings({
+          services: servicesList,
+          productsAndServices: servicesList.join(', '),
+          shopAiDetails: updatedShopDetails.trim(),
+          customerExperience: updatedShopDetails.trim(),
+          reviewStyleAndRules: updatedRules.trim(),
+          reviewWritingRules: updatedRules.trim(),
+          languagePreferences: languages,
+        });
+        if (res.settings) {
+          onUpdateSettings(res.settings);
+        }
+        setSavedStatus('saved');
+        isDirtyRef.current = false;
+      } catch {
+        setSavedStatus('idle');
+      }
+    }, 1200);
+  };
+
+  // Full Explicit Save
   const handleSaveAiReviewConfiguration = async () => {
-    // Validate language percentage allocation
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+
+    // 1. If user typed in newServiceInput but didn't click "Add Service", automatically include it!
+    let effectiveServices = [...servicesList];
+    const rawPending = newServiceInput.trim();
+    if (rawPending) {
+      const pendingItems = rawPending
+        .split(/[,;\n]+/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+      pendingItems.forEach((item) => {
+        if (!effectiveServices.some((s) => s.toLowerCase() === item.toLowerCase())) {
+          effectiveServices.push(item);
+        }
+      });
+      setServicesList(effectiveServices);
+      setNewServiceInput('');
+    }
+
+    // 2. Validate language percentage allocation
     if (languages.length > 0) {
       const totalPct = languages.reduce((acc, l) => acc + (Number(l.percentage) || 0), 0);
       if (totalPct !== 100) {
@@ -175,12 +265,14 @@ export function ReviewRepliesTab({
     }
 
     setSavingConfig(true);
+    setSavedStatus('saving');
     try {
-      const joinedServices = servicesList.join(', ');
+      const joinedServices = effectiveServices.join(', ');
       const res = await api.updateBusinessSettings({
-        services: servicesList,
+        services: effectiveServices,
         productsAndServices: joinedServices,
         shopAiDetails: shopAiDetails.trim(),
+        customerExperience: shopAiDetails.trim(),
         reviewStyleAndRules: reviewStyleAndRules.trim(),
         reviewWritingRules: reviewStyleAndRules.trim(),
         languagePreferences: languages,
@@ -188,14 +280,18 @@ export function ReviewRepliesTab({
 
       if (res.error) {
         showError(res.error);
+        setSavedStatus('idle');
       } else {
-        showSuccess('AI Review settings, writing rules, and language percentages saved successfully!');
+        showSuccess('All services, shop AI details, and writing rules saved successfully!');
+        setSavedStatus('saved');
+        isDirtyRef.current = false;
         if (res.settings) {
           onUpdateSettings(res.settings);
         }
       }
     } catch {
       showError('Failed to save AI Review settings. Please check your network connection.');
+      setSavedStatus('idle');
     } finally {
       setSavingConfig(false);
     }
@@ -203,25 +299,57 @@ export function ReviewRepliesTab({
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto pb-16">
-      {/* 1. Header Info */}
+      {/* 1. Header Info with Live Status & Quick Save */}
       <div className="bg-white border border-[#dadce0] rounded-xl p-5 sm:p-7 shadow-xs">
-        <div className="flex items-start gap-4">
-          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#e8f0fe] text-[#1a73e8] flex items-center justify-center shrink-0 shadow-2xs">
-            <MessageSquareCode className="w-6 h-6" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-[#1a73e8] uppercase tracking-wider">
-                AI Review Engine
-              </span>
-              <span className="text-[#dadce0]">&bull;</span>
-              <span className="text-xs font-medium text-[#5f6368]">
-                Gemini 3.8 Flash
-              </span>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-4">
+            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#e8f0fe] text-[#1a73e8] flex items-center justify-center shrink-0 shadow-2xs">
+              <MessageSquareCode className="w-6 h-6" />
             </div>
-            <h2 className="text-lg sm:text-xl font-bold text-[#202124] mt-0.5">
-              AI Review
-            </h2>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-[#1a73e8] uppercase tracking-wider">
+                  AI Review Engine
+                </span>
+                <span className="text-[#dadce0]">&bull;</span>
+                <span className="text-xs font-medium text-[#5f6368]">
+                  Gemini 3.8 Flash
+                </span>
+              </div>
+              <h2 className="text-lg sm:text-xl font-bold text-[#202124] mt-0.5">
+                AI Review &amp; Reply Configuration
+              </h2>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+            {savedStatus === 'saving' && (
+              <span className="inline-flex items-center gap-1.5 text-xs text-[#1a73e8] font-semibold bg-[#e8f0fe] px-3 py-1.5 rounded-full border border-[#d2e3fc]">
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                <span>Saving to cloud...</span>
+              </span>
+            )}
+            {savedStatus === 'saved' && (
+              <span className="inline-flex items-center gap-1.5 text-xs text-[#137333] font-semibold bg-[#e6f4ea] px-3 py-1.5 rounded-full border border-[#ceead6]">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>All saved to cloud</span>
+              </span>
+            )}
+            {savedStatus === 'idle' && (
+              <span className="inline-flex items-center gap-1.5 text-xs text-[#b06000] font-semibold bg-[#fef7e0] px-3 py-1.5 rounded-full border border-[#feefc3]">
+                <span>Unsaved changes</span>
+              </span>
+            )}
+
+            <button
+              type="button"
+              onClick={handleSaveAiReviewConfiguration}
+              disabled={savingConfig}
+              className="px-4 py-2 bg-[#1a73e8] hover:bg-[#1557b0] disabled:opacity-50 text-white font-medium rounded-lg text-xs shadow-2xs flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
+            >
+              {savingConfig ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+              <span>Save</span>
+            </button>
           </div>
         </div>
       </div>
@@ -279,7 +407,7 @@ export function ReviewRepliesTab({
           </label>
           {servicesList.length === 0 ? (
             <div className="p-4 bg-[#f8f9fa] border border-dashed border-[#dadce0] rounded-xl text-center text-xs text-[#5f6368]">
-              No services added yet. Type a service name above and click "Add Service".
+              No services added yet. Type a service name above and click "Add Service" or press Enter.
             </div>
           ) : (
             <div className="flex flex-wrap gap-2">
@@ -304,7 +432,7 @@ export function ReviewRepliesTab({
         </div>
       </div>
 
-      {/* 3. SHOP AI DETAILS (Auto-expanding textarea, no resize grip) */}
+      {/* 3. SHOP AI DETAILS (Auto-expanding textarea, debounced auto-save) */}
       <div className="bg-white border border-[#dadce0] rounded-xl p-5 sm:p-7 shadow-xs space-y-4">
         <div className="border-b border-[#dadce0] pb-3 flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-[#e8f0fe] text-[#1a73e8] flex items-center justify-center shrink-0">
@@ -328,14 +456,19 @@ export function ReviewRepliesTab({
             rows={4}
             value={shopAiDetails}
             onChange={(e) => {
-              setShopAiDetails(e.target.value);
+              const val = e.target.value;
+              setShopAiDetails(val);
               autoResizeTextarea(e.target);
+              triggerDebouncedAutoSave(val, reviewStyleAndRules);
+            }}
+            onBlur={() => {
+              triggerDebouncedAutoSave(shopAiDetails, reviewStyleAndRules);
             }}
             placeholder="e.g., We have over 8 years of trusted experience in desktop and laptop repairs. We specialize in custom gaming PC builds with 6 to 12 months official replacement warranty on all genuine components. Same-day diagnostics and friendly, honest turnaround available..."
             className="w-full p-3.5 bg-white border border-[#dadce0] rounded-lg text-xs sm:text-sm text-[#202124] focus:outline-none focus:border-[#1a73e8] focus:ring-1 focus:ring-[#1a73e8] shadow-2xs leading-relaxed resize-none overflow-hidden transition-[height] duration-75"
           />
           <div className="flex items-center justify-between text-[11px] text-[#5f6368] mt-1">
-            <span>Tip: The more detailed this description is, the more personalized and authentic your AI reviews will be. (Auto-expands as you type)</span>
+            <span>Tip: Auto-saves automatically as you type. (Auto-expands)</span>
             <span>{shopAiDetails.length} characters</span>
           </div>
         </div>
@@ -365,14 +498,19 @@ export function ReviewRepliesTab({
             rows={4}
             value={reviewStyleAndRules}
             onChange={(e) => {
-              setReviewStyleAndRules(e.target.value);
+              const val = e.target.value;
+              setReviewStyleAndRules(val);
               autoResizeTextarea(e.target);
+              triggerDebouncedAutoSave(shopAiDetails, val);
+            }}
+            onBlur={() => {
+              triggerDebouncedAutoSave(shopAiDetails, reviewStyleAndRules);
             }}
             placeholder="e.g.,&#10;• Maintain a warm, friendly, and authentic customer tone.&#10;• Always highlight the specific service received.&#10;• Avoid generic marketing slogans, buzzwords, or bot-like phrasing.&#10;• Keep reviews concise and realistic (2 to 4 sentences).&#10;• Mention fast turnaround time, honest pricing, and warranty coverage."
             className="w-full p-3.5 bg-white border border-[#dadce0] rounded-lg text-xs sm:text-sm text-[#202124] focus:outline-none focus:border-[#1a73e8] focus:ring-1 focus:ring-[#1a73e8] shadow-2xs leading-relaxed resize-none overflow-hidden transition-[height] duration-75"
           />
           <div className="flex items-center justify-between text-[11px] text-[#5f6368] mt-1">
-            <span>Tone, perspective, and rules can all be entered here together. (Auto-expands as you type)</span>
+            <span>Tone, perspective, and rules can all be entered here together. (Auto-saves as you type)</span>
             <span>{reviewStyleAndRules.length} characters</span>
           </div>
         </div>

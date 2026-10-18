@@ -313,6 +313,19 @@ function CustomerPortalContent() {
     );
   }
 
+  if (loadingData && !businessSettings) {
+    return (
+      <div className="min-h-screen bg-[#f8f9fa] flex items-center justify-center p-4">
+        <div className="text-center space-y-3">
+          <RefreshCw className="w-8 h-8 text-[#1a73e8] animate-spin mx-auto" />
+          <p className="text-sm font-medium text-[#5f6368]">
+            Loading your business profile and review data...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const pendingCount = reviews.filter((r) => r.replyStatus === 'pending').length;
 
   return (

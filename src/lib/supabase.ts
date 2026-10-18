@@ -564,6 +564,7 @@ export const supabaseService = {
       customSlug,
       productsAndServices: '',
       services: [],
+      shopAiDetails: '',
       reviewWritingRules: 'Focus on friendly staff, store ambiance, and prompt customer assistance.',
       reviewStyleAndRules: 'Focus on friendly staff, store ambiance, and prompt customer assistance.',
       customerExperience: 'Clean, modern, and highly customer-friendly store environment.',
@@ -644,8 +645,9 @@ export const supabaseService = {
           placeId: data.place_id ?? localSettings.placeId,
           googleReviewUrl: data.google_review_url ?? localSettings.googleReviewUrl,
           productsAndServices: data.products_and_services ?? localSettings.productsAndServices,
-          services: data.google_account_info?.services ?? (localSettings.services || []),
+          services: data.google_account_info?.services ?? (localSettings.services || (data.products_and_services ? data.products_and_services.split(/[,;\n]+/).map((s: string) => s.trim()).filter(Boolean) : [])),
           customerExperience: data.customer_experience ?? localSettings.customerExperience,
+          shopAiDetails: data.google_account_info?.shopAiDetails ?? (data.customer_experience ?? (localSettings.shopAiDetails || '')),
           brandTone: data.brand_tone || localSettings.brandTone,
           targetKeywords: data.target_keywords || localSettings.targetKeywords,
           customSlug: data.custom_slug || localSettings.customSlug,
@@ -655,8 +657,8 @@ export const supabaseService = {
           minStarRating: data.min_star_rating ?? localSettings.minStarRating,
           responseDelayMinutes: data.response_delay_minutes ?? localSettings.responseDelayMinutes,
           businessLogo: effectiveLogo,
-          reviewWritingRules: data.google_account_info?.reviewWritingRules || localSettings.reviewWritingRules,
-          reviewStyleAndRules: data.google_account_info?.reviewWritingRules || localSettings.reviewStyleAndRules,
+          reviewWritingRules: data.google_account_info?.reviewWritingRules ?? (data.google_account_info?.reviewStyleAndRules ?? (localSettings.reviewWritingRules || '')),
+          reviewStyleAndRules: data.google_account_info?.reviewStyleAndRules ?? (data.google_account_info?.reviewWritingRules ?? (localSettings.reviewStyleAndRules || '')),
           geminiApiKey: data.google_account_info?.geminiApiKey || localSettings.geminiApiKey,
           updatedAt: data.updated_at || localSettings.updatedAt,
         };
@@ -685,11 +687,20 @@ export const supabaseService = {
 
     const effectiveRules = updates.reviewStyleAndRules !== undefined ? updates.reviewStyleAndRules : updates.reviewWritingRules;
     const finalLogo = updates.businessLogo !== undefined ? updates.businessLogo : (existing.businessLogo || getStoredLogo(userId));
+    const finalServices = updates.services !== undefined ? updates.services : existing.services;
+    const finalShopDetails = updates.shopAiDetails !== undefined ? updates.shopAiDetails : existing.shopAiDetails;
+    const finalProductsServices = updates.productsAndServices !== undefined 
+      ? updates.productsAndServices 
+      : (finalServices && finalServices.length > 0 ? finalServices.join(', ') : existing.productsAndServices);
 
     const newSettings: BusinessSettings = {
       ...existing,
       ...updates,
       businessLogo: finalLogo,
+      services: finalServices,
+      shopAiDetails: finalShopDetails,
+      productsAndServices: finalProductsServices,
+      customerExperience: finalShopDetails || updates.customerExperience || existing.customerExperience || '',
       reviewWritingRules: effectiveRules !== undefined ? effectiveRules : existing.reviewWritingRules,
       reviewStyleAndRules: effectiveRules !== undefined ? effectiveRules : existing.reviewStyleAndRules,
       updatedAt: new Date().toISOString(),
@@ -727,7 +738,7 @@ export const supabaseService = {
       place_id: newSettings.placeId || '',
       google_review_url: newSettings.googleReviewUrl || '',
       products_and_services: newSettings.productsAndServices || '',
-      customer_experience: newSettings.customerExperience || '',
+      customer_experience: newSettings.shopAiDetails || newSettings.customerExperience || '',
       brand_tone: newSettings.brandTone || 'friendly',
       target_keywords: newSettings.targetKeywords || [],
       custom_slug: newSettings.customSlug || ('business-' + userId.slice(-4)),
@@ -740,8 +751,10 @@ export const supabaseService = {
         ...((existing as any).googleAccountInfo || {}),
         businessLogo: finalLogo || '',
         reviewWritingRules: newSettings.reviewWritingRules || '',
+        reviewStyleAndRules: newSettings.reviewStyleAndRules || '',
         geminiApiKey: newSettings.geminiApiKey || '',
         services: newSettings.services || [],
+        shopAiDetails: newSettings.shopAiDetails || '',
       },
       updated_at: new Date().toISOString(),
     };
