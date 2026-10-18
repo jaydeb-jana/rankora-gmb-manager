@@ -603,13 +603,14 @@ export const supabaseService = {
       .replace(/^-|-$/g, '');
     const customSlug = (baseSlug || 'store') + '-' + userId.slice(-4);
 
+    const isSuperAdmin = userId === 'usr_admin' || userId === 'admin-demo';
     const defaultSettings: BusinessSettings = {
       id: 'biz-' + userId,
       userId,
       businessName,
       category: 'Retail Store',
-      placeId: 'ChIJQ6v9a_d-lDkR4Vq7hC8k97s',
-      googleReviewUrl: 'https://search.google.com/local/writereview?placeid=ChIJQ6v9a_d-lDkR4Vq7hC8k97s',
+      placeId: isSuperAdmin ? 'ChIJQ6v9a_d-lDkR4Vq7hC8k97s' : '',
+      googleReviewUrl: isSuperAdmin ? 'https://search.google.com/local/writereview?placeid=ChIJQ6v9a_d-lDkR4Vq7hC8k97s' : '',
       customSlug,
       productsAndServices: '',
       services: [],
@@ -657,6 +658,18 @@ export const supabaseService = {
         userId,
         me.user?.fullName ? `${me.user.fullName}'s Business` : 'My Business'
       );
+    }
+
+    const isMockUrl = (url?: string) =>
+      Boolean(
+        url &&
+          (url.includes('ChIJQ6v9a_d-lDkR4Vq7hC8k97s') ||
+            url.includes('ChIJQ6v9a_d-IDkR4Vq7hC8k97s'))
+      );
+
+    if (me.user?.email !== ADMIN_CREDENTIALS.email && isMockUrl(localSettings.googleReviewUrl)) {
+      localSettings.googleReviewUrl = '';
+      localSettings.placeId = '';
     }
 
     // Ensure logo is loaded from dedicated store if missing in settings
@@ -711,6 +724,11 @@ export const supabaseService = {
           geminiApiKey: data.google_account_info?.geminiApiKey || localSettings.geminiApiKey,
           updatedAt: data.updated_at || localSettings.updatedAt,
         };
+
+        if (me.user?.email !== ADMIN_CREDENTIALS.email && isMockUrl(mapped.googleReviewUrl)) {
+          mapped.googleReviewUrl = '';
+          mapped.placeId = '';
+        }
 
         allSettings[userId] = mapped;
         setLocalStore(LOCAL_SETTINGS_KEY, allSettings);

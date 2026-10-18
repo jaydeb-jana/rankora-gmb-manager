@@ -50,7 +50,19 @@ export function BusinessSettingsTab({
   const email = user?.email || '';
 
   // 3. Google Maps Integration
-  const [googleReviewUrl, setGoogleReviewUrl] = useState(settings?.googleReviewUrl || '');
+  const isMockUrl = (url?: string) =>
+    Boolean(
+      url &&
+        (url.includes('ChIJQ6v9a_d-lDkR4Vq7hC8k97s') ||
+          url.includes('ChIJQ6v9a_d-IDkR4Vq7hC8k97s'))
+    );
+
+  const initialReviewUrl =
+    user?.email !== 'info@arventaventures.online' && isMockUrl(settings?.googleReviewUrl)
+      ? ''
+      : settings?.googleReviewUrl || '';
+
+  const [googleReviewUrl, setGoogleReviewUrl] = useState(initialReviewUrl);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -64,10 +76,14 @@ export function BusinessSettingsTab({
         setBusinessLogo(settings.businessLogo || '');
       }
       if (settings.googleReviewUrl !== undefined) {
-        setGoogleReviewUrl(settings.googleReviewUrl || '');
+        const cleanUrl =
+          user?.email !== 'info@arventaventures.online' && isMockUrl(settings.googleReviewUrl)
+            ? ''
+            : settings.googleReviewUrl || '';
+        setGoogleReviewUrl(cleanUrl);
       }
     }
-  }, [settings]);
+  }, [settings, user?.email]);
 
   // Synchronize owner inputs when user auth state updates
   useEffect(() => {
@@ -471,22 +487,33 @@ export function BusinessSettingsTab({
       </div>
 
       {/* SECTION 3: GOOGLE MAPS REVIEW LINK */}
-      <div className="bg-white border border-[#dadce0] rounded-2xl p-6 sm:p-8 shadow-xs space-y-4">
+      <div className={`bg-white border rounded-2xl p-6 sm:p-8 shadow-xs space-y-4 transition-all ${
+        !googleReviewUrl ? 'border-[#f9ab00] ring-4 ring-[#f9ab00]/10' : 'border-[#dadce0]'
+      }`}>
         <div className="border-b border-[#f1f3f4] pb-4 flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#e8f0fe] text-[#1a73e8] flex items-center justify-center shrink-0 shadow-2xs">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-2xs transition-colors ${
+              !googleReviewUrl ? 'bg-[#fef7e0] text-[#b06000]' : 'bg-[#e8f0fe] text-[#1a73e8]'
+            }`}>
               <MapPin className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-base sm:text-lg text-[#202124] tracking-tight">
-                Google Maps Review Link
-              </h3>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-base sm:text-lg text-[#202124] tracking-tight">
+                  Google Maps Review Link
+                </h3>
+                {!googleReviewUrl && (
+                  <span className="text-[10px] font-bold bg-[#f29900] text-white px-2 py-0.5 rounded-full uppercase tracking-wider shadow-2xs">
+                    Action Needed
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-[#5f6368]">
                 Where customers submit their 5-star ratings directly onto Google Maps.
               </p>
             </div>
           </div>
-          {googleReviewUrl && (
+          {googleReviewUrl ? (
             <a
               href={googleReviewUrl}
               target="_blank"
@@ -496,25 +523,70 @@ export function BusinessSettingsTab({
               <span>Test Live Link</span>
               <ExternalLink className="w-3.5 h-3.5" />
             </a>
+          ) : (
+            <span className="text-xs font-medium text-[#b06000] inline-flex items-center gap-1.5 px-3 py-1 bg-[#fef7e0] rounded-full border border-[#feefc3] shrink-0 select-none">
+              <span>👉 লিংক যোগ করা বাকি</span>
+            </span>
           )}
         </div>
 
+        {/* Attention Prompt with Hand Pointer Gesture for New Accounts */}
+        {!googleReviewUrl && (
+          <div className="p-4 bg-gradient-to-r from-[#fef7e0] via-[#fff8e1] to-[#fef7e0] border-2 border-dashed border-[#f9ab00] rounded-xl flex items-start sm:items-center gap-3.5 shadow-xs">
+            <div className="w-11 h-11 rounded-2xl bg-[#fbbc04]/30 text-[#b06000] flex items-center justify-center shrink-0 text-2xl select-none animate-bounce shadow-2xs">
+              👉
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h4 className="text-sm font-bold text-[#b06000]">
+                  এখানে আপনার জি এম বি প্রোফাইল রিভিউ লিংক দিন
+                </h4>
+                <span className="text-[10px] font-bold bg-[#f29900] text-white px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  Important Step
+                </span>
+              </div>
+              <p className="text-xs text-[#784700] mt-0.5 leading-relaxed">
+                আপনার গুগল বিজনেস প্রোফাইলের (GMB) রিভিউ লিংকটি নিচের বক্সে পেস্ট করুন যাতে গ্রাহকরা সরাসরি গুগল ম্যাপে ৫-স্টার রিভিউ দিতে পারেন।
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className="space-y-1.5">
-          <label className="block text-xs font-semibold text-[#202124]">
-            Google Review Submission URL
-          </label>
+          <div className="flex items-center justify-between">
+            <label className="block text-xs font-semibold text-[#202124]">
+              Google Review Submission URL
+            </label>
+            {!googleReviewUrl && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#b06000] bg-[#fef7e0] px-2 py-0.5 rounded-full border border-[#f9ab00]/40 animate-pulse">
+                <span>👇 এখানে আপনার লিংক পেস্ট করুন</span>
+              </span>
+            )}
+          </div>
+
           <div className="relative">
-            <MapPin className="w-4 h-4 text-[#5f6368] absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <MapPin className={`w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors ${
+              !googleReviewUrl ? 'text-[#f9ab00]' : 'text-[#5f6368]'
+            }`} />
             <input
               type="url"
               value={googleReviewUrl}
               onChange={(e) => setGoogleReviewUrl(e.target.value)}
-              placeholder="https://search.google.com/local/writereview?placeid=..."
-              className="w-full pl-10 pr-4 py-2.5 bg-white border border-[#dadce0] rounded-xl text-sm text-[#202124] focus:outline-none focus:border-[#1a73e8] focus:ring-2 focus:ring-[#1a73e8]/20 transition-all shadow-2xs"
+              placeholder="https://search.google.com/local/writereview?placeid=... অথবা https://g.page/r/..."
+              className={`w-full pl-10 pr-4 py-2.5 bg-white rounded-xl text-sm text-[#202124] focus:outline-none transition-all shadow-2xs ${
+                !googleReviewUrl
+                  ? 'border-2 border-[#f9ab00] bg-[#fffdfa] focus:border-[#e37400] focus:ring-4 focus:ring-[#f9ab00]/20'
+                  : 'border border-[#dadce0] focus:border-[#1a73e8] focus:ring-2 focus:ring-[#1a73e8]/20'
+              }`}
             />
           </div>
-          <p className="text-[11px] text-[#5f6368]">
-            Enter your Google Business Profile review link or Google Maps write-review URL.
+          <p className="text-[11px] text-[#5f6368] flex items-center justify-between gap-2 flex-wrap">
+            <span>Enter your Google Business Profile review link or Google Maps write-review URL.</span>
+            {!googleReviewUrl && (
+              <span className="text-[11px] font-medium text-[#b06000]">
+                Tip: Google Maps বা Search থেকে "Ask for reviews" অপশনে ক্লিক করে শর্ট লিংকটি কপি করুন।
+              </span>
+            )}
           </p>
         </div>
       </div>
