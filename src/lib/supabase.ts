@@ -177,6 +177,37 @@ export const REAL_INITIAL_USERS: Array<{
       connected: false,
     },
   },
+  {
+    user: {
+      id: 'usr_mateyij394_proguidex',
+      email: 'mateyij394@proguidex.com',
+      fullName: 'Jaydeb',
+      mobileNumber: '+91 8001698004',
+      isVerified: true,
+      role: 'user',
+      status: 'active',
+      planId: 'pro-plan',
+      businessName: 'Jana',
+      createdAt: '2026-10-18T11:00:00.000Z',
+    },
+    settings: {
+      id: 'biz-usr_mateyij394_proguidex',
+      userId: 'usr_mateyij394_proguidex',
+      businessName: 'Jana',
+      category: 'Local Service & Retail',
+      googleReviewUrl: 'http://localhost:3000/business-profile',
+      customSlug: 'jana-store',
+      brandTone: 'friendly',
+      languagePreferences: [{ code: 'en', name: 'English', percentage: 100 }],
+      autoReplyEnabled: true,
+      autoReplyMode: 'approval',
+      minStarRating: 4,
+      responseDelayMinutes: 5,
+    },
+    googleAccount: {
+      connected: false,
+    },
+  },
 ];
 
 function purgeDemoUsersIfPresent(): void {
@@ -212,14 +243,32 @@ function syncRealUsers(): void {
     const allSettings = getLocalStore<Record<string, any>>(LOCAL_SETTINGS_KEY, {});
     const googleAccounts = getLocalStore<Record<string, any>>(LOCAL_GOOGLE_KEY, {});
 
-    REAL_INITIAL_USERS.forEach(({ user, settings, googleAccount }) => {
-      if (!users[user.email]) {
-        users[user.email] = user;
+    // Check active session user and ensure they are added to all users registry
+    const activeUser = getLocalStore<any>(LOCAL_CURRENT_USER_KEY, null);
+    if (
+      activeUser &&
+      activeUser.email &&
+      activeUser.role !== 'admin' &&
+      activeUser.email !== 'info@arventaventures.online'
+    ) {
+      if (!users[activeUser.email]) {
+        users[activeUser.email] = activeUser;
       }
-      if (settings && !allSettings[user.id]) {
+    }
+
+    REAL_INITIAL_USERS.forEach(({ user, settings, googleAccount }) => {
+      users[user.email] = {
+        ...user,
+        ...(users[user.email] || {}),
+        businessName: users[user.email]?.businessName || user.businessName,
+        mobileNumber: users[user.email]?.mobileNumber || user.mobileNumber,
+        fullName: users[user.email]?.fullName || user.fullName,
+      };
+      if (settings) {
         allSettings[user.id] = {
           ...settings,
-          updatedAt: settings.updatedAt || new Date().toISOString(),
+          ...(allSettings[user.id] || {}),
+          updatedAt: allSettings[user.id]?.updatedAt || settings.updatedAt || new Date().toISOString(),
         };
       }
       if (googleAccount && !googleAccounts[user.id]) {
@@ -580,6 +629,15 @@ export const supabaseService = {
         localStorage.removeItem('reputepulse_token');
         setLocalStore(LOCAL_CURRENT_USER_KEY, currentUser);
 
+        // Save user to all users registry
+        const usersRecord = getLocalStore<Record<string, any>>(LOCAL_USERS_KEY, {});
+        usersRecord[currentUser.email] = {
+          ...(usersRecord[currentUser.email] || {}),
+          ...currentUser,
+          businessName: user?.businessName || authData.user.user_metadata?.business_name || `${currentUser.fullName}'s Business`,
+        };
+        setLocalStore(LOCAL_USERS_KEY, usersRecord);
+
         // Ensure business settings exist
         await this.initDefaultBusinessSettings(currentUser.id, user?.businessName || `${currentUser.fullName}'s Business`);
 
@@ -915,18 +973,23 @@ export const supabaseService = {
 
     // 2. Update user profile if changed
     let updatedUser = me.user;
-    if (updates.fullName || updates.mobileNumber) {
+    if (updatedUser?.email) {
       const users = getLocalStore<Record<string, any>>(LOCAL_USERS_KEY, {});
-      if (updatedUser?.email && users[updatedUser.email]) {
-        if (updates.fullName) users[updatedUser.email].fullName = updates.fullName;
-        if (updates.mobileNumber) users[updatedUser.email].mobileNumber = updates.mobileNumber;
-        setLocalStore(LOCAL_USERS_KEY, users);
-      }
-      if (updatedUser) {
+      users[updatedUser.email] = {
+        ...(users[updatedUser.email] || {}),
+        ...updatedUser,
+        fullName: updates.fullName || updatedUser.fullName,
+        mobileNumber: updates.mobileNumber || updatedUser.mobileNumber,
+        businessName: newSettings.businessName,
+      };
+      setLocalStore(LOCAL_USERS_KEY, users);
+
+      if (updates.fullName || updates.mobileNumber) {
         updatedUser = {
           ...updatedUser,
           fullName: updates.fullName || updatedUser.fullName,
           mobileNumber: updates.mobileNumber || updatedUser.mobileNumber,
+          businessName: newSettings.businessName,
         };
         setLocalStore(LOCAL_CURRENT_USER_KEY, updatedUser);
       }
@@ -1320,6 +1383,17 @@ export const supabaseService = {
         businessName: userSettings?.businessName || u.businessName || existing?.businessName || `${u.fullName || 'Business Owner'}'s Business`,
         planId: u.planId || existing?.planId || 'pro-plan',
       };
+    });
+
+    // 3. Guarantee all initial verified users are included
+    REAL_INITIAL_USERS.forEach(({ user, settings }) => {
+      const email = user.email.toLowerCase().trim();
+      if (!realUsersMap[email]) {
+        realUsersMap[email] = {
+          ...user,
+          businessName: settings?.businessName || user.businessName || `${user.fullName}'s Business`,
+        };
+      }
     });
 
     return { users: Object.values(realUsersMap) };
