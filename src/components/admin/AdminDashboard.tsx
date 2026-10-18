@@ -167,9 +167,8 @@ export function AdminDashboard({ onUserImpersonated }: AdminDashboardProps = {})
       showSuccess(`Logged into ${targetUser.fullName}'s account without password.`);
       if (onUserImpersonated) {
         onUserImpersonated();
-      } else {
-        navigate('/');
       }
+      navigate('/');
     } catch {
       showError('Failed to enter user account.');
     }

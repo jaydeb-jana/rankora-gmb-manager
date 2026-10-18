@@ -75,7 +75,8 @@ function CustomerPortalContent() {
   const navigate = useNavigate();
 
   // Active tab is directly driven by the browser URL route
-  const activeTab: DashboardTab = getTabFromPath(location.pathname);
+  const rawTab: DashboardTab = getTabFromPath(location.pathname);
+  const activeTab: DashboardTab = rawTab === 'admin_panel' ? 'overview' : rawTab;
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
 
   const [businessSettings, setBusinessSettings] = useState<BusinessSettings | null>(null);
@@ -392,7 +393,10 @@ function CustomerPortalContent() {
         />
 
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-7">
-          {activeTab === 'overview' && (
+          {(activeTab === 'overview' ||
+            !['business_settings', 'review_links', 'review_replies', 'docs', 'plans', 'contact', 'security'].includes(
+              activeTab
+            )) && (
             <OverviewTab
               settings={currentSettings}
               googleAccount={googleAccount}

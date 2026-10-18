@@ -8,7 +8,10 @@ import {
   Globe,
   ChevronLeft,
   Layers,
-  Store,
+  CheckCircle2,
+  ThumbsUp,
+  MapPin,
+  Star,
 } from 'lucide-react';
 import { api } from '../../lib/api';
 
@@ -36,41 +39,56 @@ const RATING_EMOJIS = [
     rating: 1,
     emoji: '😡',
     label: 'Terrible',
+    stars: '★☆☆☆☆',
     phrase: 'Needs Improvement',
-    color: 'text-red-500',
-    activeBg: 'bg-red-50 border-red-300 ring-2 ring-red-200',
+    color: 'text-[#d93025]',
+    bg: 'bg-[#fce8e6]',
+    border: 'border-[#fad2cf]',
+    ring: 'ring-[#d93025]/30',
   },
   {
     rating: 2,
     emoji: '🙁',
     label: 'Poor',
+    stars: '★★☆☆☆',
     phrase: 'Below Expectations',
-    color: 'text-orange-500',
-    activeBg: 'bg-orange-50 border-orange-300 ring-2 ring-orange-200',
+    color: 'text-[#e37400]',
+    bg: 'bg-[#fef7e0]',
+    border: 'border-[#feefc3]',
+    ring: 'ring-[#e37400]/30',
   },
   {
     rating: 3,
     emoji: '😐',
-    label: 'Average',
+    label: 'Okay',
+    stars: '★★★☆☆',
     phrase: 'Satisfactory Experience',
-    color: 'text-yellow-600',
-    activeBg: 'bg-yellow-50 border-yellow-300 ring-2 ring-yellow-200',
+    color: 'text-[#f29900]',
+    bg: 'bg-[#fef7e0]',
+    border: 'border-[#feefc3]',
+    ring: 'ring-[#f29900]/30',
   },
   {
     rating: 4,
     emoji: '😊',
     label: 'Good',
-    phrase: 'Great Experience • Highly Satisfied',
-    color: 'text-blue-500',
-    activeBg: 'bg-blue-50 border-blue-300 ring-2 ring-blue-200',
+    stars: '★★★★☆',
+    phrase: 'Great Experience & Quality',
+    color: 'text-[#1a73e8]',
+    bg: 'bg-[#e8f0fe]',
+    border: 'border-[#d2e3fc]',
+    ring: 'ring-[#1a73e8]/30',
   },
   {
     rating: 5,
     emoji: '😍',
-    label: 'Outstanding!',
-    phrase: 'Loved it! • Highly Recommended!',
-    color: 'text-emerald-600',
-    activeBg: 'bg-emerald-50 border-emerald-400 ring-2 ring-emerald-200',
+    label: 'Excellent',
+    stars: '★★★★★',
+    phrase: 'Loved it! Highly Recommended',
+    color: 'text-[#188038]',
+    bg: 'bg-[#e6f4ea]',
+    border: 'border-[#ceead6]',
+    ring: 'ring-[#188038]/30',
   },
 ];
 
@@ -81,7 +99,7 @@ const DEFAULT_HIGHLIGHT_CHIPS = [
   '🧼 Clean & Hygienic Space',
   '💰 Great Value for Money',
   '🤝 Helpful & Honest Guidance',
-  '🏆 Highly Recommended',
+  '🏆 Exceeded Expectations',
   '🎯 Attention to Detail',
   '🛋️ Wonderful Atmosphere',
   '📦 Great Packaging & Care',
@@ -246,7 +264,7 @@ export function PublicReviewPage({ slug, onBackToDashboard }: PublicReviewPagePr
         <div className="text-center space-y-3">
           <RefreshCw className="w-8 h-8 text-[#1a73e8] animate-spin mx-auto" />
           <p className="text-sm font-medium text-[#5f6368]">
-            Loading business profile...
+            Connecting to Google Business Profile...
           </p>
         </div>
       </div>
@@ -257,18 +275,21 @@ export function PublicReviewPage({ slug, onBackToDashboard }: PublicReviewPagePr
     return (
       <div className="min-h-screen bg-[#f8f9fa] flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-white border border-[#dadce0] rounded-2xl p-6 text-center space-y-4 shadow-sm">
+          <div className="w-12 h-12 rounded-full bg-red-50 text-red-500 mx-auto flex items-center justify-center">
+            <MapPin className="w-6 h-6" />
+          </div>
           <h2 className="text-lg font-bold text-[#202124]">
             Business Not Found
           </h2>
           <p className="text-xs text-[#5f6368]">
-            {error || 'The requested review landing page does not exist or has been modified.'}
+            {error || 'The requested Google review landing page does not exist or has been modified.'}
           </p>
           {onBackToDashboard && (
             <button
               onClick={onBackToDashboard}
-              className="px-4 py-2 bg-[#1a73e8] text-white rounded-md text-xs font-medium hover:bg-[#1557b0]"
+              className="px-4 py-2 bg-[#1a73e8] text-white rounded-lg text-xs font-medium hover:bg-[#1557b0] transition-colors cursor-pointer"
             >
-              Return to Customer Dashboard
+              Return to Dashboard
             </button>
           )}
         </div>
@@ -282,344 +303,447 @@ export function PublicReviewPage({ slug, onBackToDashboard }: PublicReviewPagePr
     : (business.productsAndServices ? business.productsAndServices.split(',').map((s) => s.trim()).filter(Boolean) : []);
 
   return (
-    <div className="min-h-screen bg-[#f8f9fa] py-6 px-4 sm:px-6 flex flex-col justify-between">
+    <div className="min-h-screen bg-[#f8f9fa] py-6 px-4 sm:px-6 flex flex-col justify-between selection:bg-[#e8f0fe] selection:text-[#1a73e8]">
       {onBackToDashboard && (
         <div className="max-w-md mx-auto w-full mb-3 flex items-center justify-between text-xs">
           <button
             onClick={onBackToDashboard}
-            className="flex items-center gap-1 text-[#5f6368] hover:text-[#202124] font-medium transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 text-[#5f6368] hover:text-[#202124] font-medium transition-colors cursor-pointer"
           >
             <ChevronLeft className="w-4 h-4" />
             <span>Back to Dashboard</span>
           </button>
-          <span className="px-2.5 py-0.5 rounded-full bg-[#e8f0fe] text-[#1a73e8] font-medium text-[11px]">
-            Mobile View Preview
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#e8f0fe] text-[#1a73e8] font-medium text-[11px] border border-[#d2e3fc]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#1a73e8]"></span>
+            Live Customer Preview
           </span>
         </div>
       )}
 
-      {/* Main Review Generator Card */}
-      <div className="max-w-md mx-auto w-full bg-white border border-[#dadce0] rounded-2xl p-6 sm:p-7 shadow-xs space-y-6">
-        {/* Business Branding (Displays Logo if present, otherwise clean Store canopy) */}
-        <div className="text-center space-y-2 pb-4 border-b border-[#dadce0]">
-          {business.businessLogo ? (
-            <div className="w-18 h-18 rounded-2xl bg-white border border-[#dadce0] shadow-2xs flex items-center justify-center mx-auto mb-2 overflow-hidden p-1.5">
-              <img
-                src={business.businessLogo}
-                alt={business.businessName}
-                className="w-full h-full object-contain"
-              />
-            </div>
-          ) : (
-            <div className="w-14 h-14 rounded-2xl bg-white border border-[#dadce0] shadow-2xs flex items-center justify-center mx-auto mb-2">
-              <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none">
-                <path d="M4 10V19C4 19.5523 4.44772 20 5 20H19C19.5523 20 20 19.5523 20 19V10" stroke="#1A73E8" strokeWidth="2" strokeLinecap="round"/>
-                <path d="M2 7L4.5 4H19.5L22 7L20 10H4L2 7Z" fill="#1A73E8"/>
-                <path d="M7 10C7 11.1046 6.10457 12 5 12C3.89543 12 3 11.1046 3 10" stroke="#EA4335" strokeWidth="2"/>
-                <path d="M11 10C11 11.1046 10.1046 12 9 12C7.89543 12 7 11.1046 7 10" stroke="#FBBC04" strokeWidth="2"/>
-                <path d="M15 10C15 11.1046 14.1046 12 13 12C11.8954 12 11 11.1046 11 10" stroke="#34A853" strokeWidth="2"/>
-                <path d="M19 10C19 11.1046 18.1046 12 17 12C15.8954 12 15 11.1046 15 10" stroke="#1A73E8" strokeWidth="2"/>
-                <path d="M9 20V14H15V20" stroke="#1A73E8" strokeWidth="2"/>
-              </svg>
-            </div>
-          )}
-          <h1 className="text-xl font-bold text-[#202124] tracking-tight">
-            {business.businessName}
-          </h1>
-          <p className="text-xs text-[#5f6368] font-medium">
-            {business.category || 'Google Business Profile'}
-          </p>
+      {/* Main Google-Themed Review Card */}
+      <div className="max-w-md mx-auto w-full bg-white border border-[#dadce0] rounded-2xl shadow-sm overflow-hidden">
+        {/* Google Official 4-Color Canopy Stripe */}
+        <div className="grid grid-cols-4 h-1.5 w-full">
+          <div className="bg-[#4285F4]"></div>
+          <div className="bg-[#EA4335]"></div>
+          <div className="bg-[#FBBC04]"></div>
+          <div className="bg-[#34A853]"></div>
         </div>
 
-        {/* STEP 1: SERVICES & OFFERINGS (Positioned at the very top as requested) */}
-        {availableServices.length > 0 && (
-          <div className="space-y-2">
+        <div className="p-6 sm:p-7 space-y-6">
+          {/* Business Header with Google Verified Profile styling */}
+          <div className="text-center space-y-2.5 pb-4 border-b border-[#f1f3f4]">
+            {business.businessLogo ? (
+              <div className="relative inline-block mx-auto mb-1">
+                <div className="w-20 h-20 rounded-2xl bg-white border border-[#dadce0] shadow-xs flex items-center justify-center overflow-hidden p-2">
+                  <img
+                    src={business.businessLogo}
+                    alt={business.businessName}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+                <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-[#1a73e8] border-2 border-white flex items-center justify-center text-white shadow-xs">
+                  <Check className="w-3.5 h-3.5 stroke-[3]" />
+                </div>
+              </div>
+            ) : (
+              <div className="relative inline-block mx-auto mb-1">
+                <div className="w-16 h-16 rounded-2xl bg-[#e8f0fe] border border-[#d2e3fc] flex items-center justify-center shadow-xs">
+                  {/* Google Storefront / Business Icon */}
+                  <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none">
+                    <path d="M4 10V19C4 19.5523 4.44772 20 5 20H19C19.5523 20 20 19.5523 20 19V10" stroke="#1A73E8" strokeWidth="2" strokeLinecap="round"/>
+                    <path d="M2 7L4.5 4H19.5L22 7L20 10H4L2 7Z" fill="#1A73E8"/>
+                    <path d="M7 10C7 11.1046 6.10457 12 5 12C3.89543 12 3 11.1046 3 10" stroke="#EA4335" strokeWidth="2"/>
+                    <path d="M11 10C11 11.1046 10.1046 12 9 12C7.89543 12 7 11.1046 7 10" stroke="#FBBC04" strokeWidth="2"/>
+                    <path d="M15 10C15 11.1046 14.1046 12 13 12C11.8954 12 11 11.1046 11 10" stroke="#34A853" strokeWidth="2"/>
+                    <path d="M19 10C19 11.1046 18.1046 12 17 12C15.8954 12 15 11.1046 15 10" stroke="#1A73E8" strokeWidth="2"/>
+                    <path d="M9 20V14H15V20" stroke="#1A73E8" strokeWidth="2"/>
+                  </svg>
+                </div>
+                <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#1a73e8] border-2 border-white flex items-center justify-center text-white shadow-xs">
+                  <Check className="w-3 h-3 stroke-[3]" />
+                </div>
+              </div>
+            )}
+
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold text-[#202124] tracking-tight">
+                {business.businessName}
+              </h1>
+              <div className="flex items-center justify-center gap-1.5 mt-1 text-xs text-[#5f6368] font-medium">
+                <span className="inline-flex items-center gap-1 text-[#1a73e8]">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  Verified on Google Maps
+                </span>
+                <span>•</span>
+                <span>{business.category || 'Local Business'}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* STEP 1: SERVICES & OFFERINGS (Positioned at the very top as requested) */}
+          {availableServices.length > 0 && (
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-[#202124] flex items-center gap-1.5 tracking-wide">
+                  <Layers className="w-3.5 h-3.5 text-[#1a73e8]" />
+                  <span>SERVICES & OFFERINGS</span>
+                </label>
+                <span className="text-[11px] text-[#5f6368]">
+                  Tap what you experienced
+                </span>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {availableServices.map((srv) => {
+                  const isSelected = selectedServices.includes(srv);
+                  return (
+                    <button
+                      type="button"
+                      key={srv}
+                      onClick={() => toggleService(srv)}
+                      className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-colors cursor-pointer border ${
+                        isSelected
+                          ? 'bg-[#1a73e8] border-[#1a73e8] text-white shadow-xs'
+                          : 'bg-white border-[#dadce0] text-[#3c4043] hover:bg-[#f8f9fa] hover:border-[#1a73e8]/40'
+                      }`}
+                    >
+                      {srv}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* STEP 2: EMOJI EXPERIENCE RATING (Spacious, well-aligned, professional Google rating scale) */}
+          <div className="space-y-3 pt-1">
+            <div className="text-center">
+              <label className="text-xs font-bold text-[#202124] tracking-wide uppercase">
+                How was your experience today?
+              </label>
+              <p className="text-[11px] text-[#5f6368] mt-0.5">
+                Tap an emoji to select your rating
+              </p>
+            </div>
+
+            {/* 5-Column Clean Layout - Emojis have ample space, labels are clean underneath */}
+            <div className="grid grid-cols-5 gap-2 sm:gap-3 pt-1">
+              {RATING_EMOJIS.map((item) => {
+                const isSelected = item.rating === starRating;
+                return (
+                  <button
+                    type="button"
+                    key={item.rating}
+                    onClick={() => setStarRating(item.rating)}
+                    className="flex flex-col items-center gap-1.5 focus:outline-none group cursor-pointer transition-transform active:scale-95"
+                    aria-label={`${item.rating} star - ${item.label}`}
+                  >
+                    <div
+                      className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center transition-all ${
+                        isSelected
+                          ? `${item.bg} border-2 ${item.border} shadow-sm ring-2 ${item.ring} scale-105`
+                          : 'bg-white border border-[#dadce0] hover:bg-[#f8f9fa] hover:border-[#bdc1c6] opacity-80 hover:opacity-100'
+                      }`}
+                    >
+                      <span className="text-2xl sm:text-3xl leading-none select-none">
+                        {item.emoji}
+                      </span>
+                    </div>
+                    <span
+                      className={`text-[11px] sm:text-xs text-center leading-tight transition-colors ${
+                        isSelected
+                          ? `${item.color} font-bold`
+                          : 'text-[#5f6368] font-medium group-hover:text-[#202124]'
+                      }`}
+                    >
+                      {item.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Google Rating Status Indicator Badge */}
+            <div
+              className={`py-2 px-3.5 rounded-xl border flex items-center justify-between text-xs transition-all ${currentEmojiInfo.bg} ${currentEmojiInfo.border}`}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-amber-500 font-bold tracking-wider text-xs select-none">
+                  {currentEmojiInfo.stars}
+                </span>
+                <span className={`font-bold ${currentEmojiInfo.color}`}>
+                  {currentEmojiInfo.rating}.0 • {currentEmojiInfo.label}
+                </span>
+              </div>
+              <span className={`text-[11px] font-medium ${currentEmojiInfo.color} truncate ml-2`}>
+                "{currentEmojiInfo.phrase}"
+              </span>
+            </div>
+          </div>
+
+          {/* STEP 3: WHAT STOOD OUT THE MOST? (Positive Highlights) */}
+          <div className="space-y-2.5 pt-1">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-[#202124] flex items-center gap-1.5 uppercase tracking-wider">
-                <Layers className="w-3.5 h-3.5 text-[#1a73e8]" />
-                <span>Services & Offerings</span>
+              <label className="text-xs font-bold text-[#202124] flex items-center gap-1.5 tracking-wide">
+                <ThumbsUp className="w-3.5 h-3.5 text-[#1a73e8]" />
+                <span>WHAT STOOD OUT THE MOST?</span>
               </label>
               <span className="text-[11px] text-[#5f6368]">
-                Tap what you experienced
+                Tap to select
               </span>
             </div>
 
             <div className="flex flex-wrap gap-2">
-              {availableServices.map((srv) => {
-                const isSelected = selectedServices.includes(srv);
+              {DEFAULT_HIGHLIGHT_CHIPS.map((chip) => {
+                const selected = selectedChips.includes(chip);
                 return (
                   <button
                     type="button"
-                    key={srv}
-                    onClick={() => toggleService(srv)}
+                    key={chip}
+                    onClick={() => toggleChip(chip)}
                     className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-colors cursor-pointer border ${
-                      isSelected
-                        ? 'bg-[#1a73e8] border-[#1a73e8] text-white shadow-xs'
+                      selected
+                        ? 'bg-[#e8f0fe] border-[#1a73e8] text-[#1a73e8] ring-1 ring-[#1a73e8] shadow-2xs font-semibold'
                         : 'bg-white border-[#dadce0] text-[#3c4043] hover:bg-[#f8f9fa] hover:border-[#1a73e8]/40'
                     }`}
                   >
-                    {srv}
+                    {chip}
                   </button>
                 );
               })}
             </div>
           </div>
-        )}
 
-        {/* STEP 2: EMOJI EXPERIENCE RATING (Replaced Stars with interactive Emojis) */}
-        <div className="text-center space-y-2.5 pt-1">
-          <label className="block text-xs font-bold text-[#202124] uppercase tracking-wider">
-            How was your experience today?
-          </label>
-
-          <div className="flex justify-center gap-2 sm:gap-3">
-            {RATING_EMOJIS.map((item) => {
-              const isSelected = item.rating === starRating;
-              return (
-                <button
-                  type="button"
-                  key={item.rating}
-                  onClick={() => setStarRating(item.rating)}
-                  className={`w-13 h-13 sm:w-14 sm:h-14 rounded-2xl flex flex-col items-center justify-center cursor-pointer border transition-colors ${
-                    isSelected
-                      ? `${item.activeBg} shadow-xs`
-                      : 'bg-white border-[#dadce0] hover:bg-[#f8f9fa] opacity-75 hover:opacity-100'
-                  }`}
-                  aria-label={`${item.rating} - ${item.label}`}
-                >
-                  <span className="text-2xl sm:text-3xl leading-none select-none">
-                    {item.emoji}
-                  </span>
-                  <span className="text-[9px] font-semibold text-[#5f6368] mt-1">
-                    {item.label}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          <p className="text-xs font-semibold text-[#202124] pt-1 flex items-center justify-center gap-1.5">
-            <span>{currentEmojiInfo.emoji}</span>
-            <span className={currentEmojiInfo.color}>{currentEmojiInfo.label}</span>
-            <span className="text-[#dadce0]">&bull;</span>
-            <span className="text-[#5f6368] font-normal">{currentEmojiInfo.phrase}</span>
-          </p>
-        </div>
-
-        {/* STEP 3: WHAT STOOD OUT THE MOST? */}
-        <div className="space-y-2 pt-1">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-bold text-[#202124] uppercase tracking-wider">
-              What stood out the most? (Tap to select)
+          {/* STEP 4: REVIEW LANGUAGE SELECTION */}
+          <div className="flex items-center justify-between pt-1">
+            <label className="text-xs font-semibold text-[#202124] flex items-center gap-1.5">
+              <Globe className="w-3.5 h-3.5 text-[#1a73e8]" />
+              <span>Review language</span>
             </label>
-            <span className="text-[11px] text-[#5f6368]">
-              Select highlights
-            </span>
+            <select
+              value={selectedLanguage}
+              onChange={(e) => setSelectedLanguage(e.target.value)}
+              className="px-2.5 py-1 text-xs font-medium bg-white border border-[#dadce0] rounded-md text-[#202124] focus:outline-none focus:border-[#1a73e8] cursor-pointer"
+            >
+              {(() => {
+                const configured = business.languagePreferences && business.languagePreferences.length > 0
+                  ? business.languagePreferences
+                  : [
+                      { code: 'en', name: 'English' },
+                      { code: 'hi', name: 'Hindi' },
+                      { code: 'bn', name: 'Bengali' },
+                    ];
+                
+                const extras = [
+                  { code: 'en', name: 'English' },
+                  { code: 'hi', name: 'Hindi' },
+                  { code: 'bn', name: 'Bengali' },
+                ].filter((ex) => !configured.some((c) => c.name.toLowerCase() === ex.name.toLowerCase()));
+
+                return [...configured, ...extras].map((lang) => (
+                  <option key={lang.code} value={lang.name}>
+                    {lang.name}
+                  </option>
+                ));
+              })()}
+            </select>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            {DEFAULT_HIGHLIGHT_CHIPS.map((chip) => {
-              const selected = selectedChips.includes(chip);
-              return (
-                <button
-                  type="button"
-                  key={chip}
-                  onClick={() => toggleChip(chip)}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-colors cursor-pointer border ${
-                    selected
-                      ? 'bg-[#e8f0fe] border-[#1a73e8] text-[#1a73e8] ring-1 ring-[#1a73e8] shadow-2xs'
-                      : 'bg-white border-[#dadce0] text-[#3c4043] hover:bg-[#f8f9fa] hover:border-[#1a73e8]/40'
-                  }`}
-                >
-                  {chip}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* STEP 4: REVIEW LANGUAGE SELECTION */}
-        <div className="flex items-center justify-between pt-1">
-          <label className="text-xs font-semibold text-[#202124] flex items-center gap-1.5">
-            <Globe className="w-3.5 h-3.5 text-[#1a73e8]" />
-            <span>Review language</span>
-          </label>
-          <select
-            value={selectedLanguage}
-            onChange={(e) => setSelectedLanguage(e.target.value)}
-            className="px-2.5 py-1 text-xs font-medium bg-white border border-[#dadce0] rounded-md text-[#202124] focus:outline-none focus:border-[#1a73e8]"
-          >
-            {(() => {
-              const configured = business.languagePreferences && business.languagePreferences.length > 0
-                ? business.languagePreferences
-                : [
-                    { code: 'en', name: 'English' },
-                    { code: 'hi', name: 'Hindi' },
-                    { code: 'bn', name: 'Bengali' },
-                  ];
-              
-              const extras = [
-                { code: 'en', name: 'English' },
-                { code: 'hi', name: 'Hindi' },
-                { code: 'bn', name: 'Bengali' },
-              ].filter((ex) => !configured.some((c) => c.name.toLowerCase() === ex.name.toLowerCase()));
-
-              return [...configured, ...extras].map((lang) => (
-                <option key={lang.code} value={lang.name}>
-                  {lang.name}
-                </option>
-              ));
-            })()}
-          </select>
-        </div>
-
-        {/* STEP 5: AI ENHANCE CUSTOM REVIEW OPTION (TOGGLE & INPUT BOX) */}
-        <div className="pt-2 border-t border-[#f1f3f4] space-y-3">
-          <div className="flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-[#f8fafd] to-[#e8f0fe] border border-[#d2e3fc]">
-            <div className="flex items-center gap-2.5 min-w-0 pr-2">
-              <div className="w-8 h-8 rounded-lg bg-white border border-[#d2e3fc] flex items-center justify-center text-[#1a73e8] shadow-2xs shrink-0">
-                <Sparkles className="w-4 h-4 text-[#1a73e8]" />
-              </div>
-              <div className="min-w-0">
-                <div className="text-xs font-bold text-[#202124] truncate">
-                  Enable AI Enhanced Custom Review
+          {/* STEP 5: AI ENHANCE CUSTOM REVIEW OPTION (TOGGLE & INPUT BOX) */}
+          <div className="pt-2 border-t border-[#f1f3f4] space-y-3">
+            <div className="flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-[#f8fafd] to-[#e8f0fe] border border-[#d2e3fc]">
+              <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                <div className="w-8 h-8 rounded-lg bg-white border border-[#d2e3fc] flex items-center justify-center text-[#1a73e8] shadow-2xs shrink-0">
+                  <Sparkles className="w-4 h-4 text-[#1a73e8]" />
                 </div>
-                <div className="text-[11px] text-[#5f6368] truncate">
-                  Add custom notes or specific feedback for AI to enhance
+                <div className="min-w-0">
+                  <div className="text-xs font-bold text-[#202124] truncate">
+                    Enable AI Enhanced Custom Review
+                  </div>
+                  <div className="text-[11px] text-[#5f6368] truncate">
+                    Add custom notes or specific feedback for AI to polish
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <label className="relative inline-flex items-center cursor-pointer shrink-0">
-              <input
-                type="checkbox"
-                checked={aiEnhanceEnabled}
-                onChange={(e) => setAiEnhanceEnabled(e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-10 h-5 bg-[#dadce0] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-[#dadce0] after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#1a73e8]"></div>
-            </label>
-          </div>
-
-          {/* Expandable Custom Review Textarea */}
-          {aiEnhanceEnabled && (
-            <div className="space-y-1.5 p-3.5 bg-white border border-[#1a73e8]/30 rounded-xl shadow-xs transition-all animate-fadeIn">
-              <label className="block text-xs font-semibold text-[#1a73e8] flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Your Custom Notes / Keywords to Polish</span>
+              <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                <input
+                  type="checkbox"
+                  checked={aiEnhanceEnabled}
+                  onChange={(e) => setAiEnhanceEnabled(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-10 h-5 bg-[#dadce0] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-[#dadce0] after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#1a73e8]"></div>
               </label>
-              <textarea
-                rows={3}
-                value={customReviewNotes}
-                onChange={(e) => setCustomReviewNotes(e.target.value)}
-                placeholder="e.g., I bought items here, the quality was amazing and staff helped me find exactly what I needed..."
-                className="w-full p-2.5 bg-[#f8f9fa] border border-[#dadce0] rounded-lg text-xs text-[#202124] focus:outline-none focus:border-[#1a73e8] focus:bg-white focus:ring-1 focus:ring-[#1a73e8] transition-all"
-              />
-              <p className="text-[11px] text-[#5f6368]">
-                AI will polish your words into an authentic, natural 5-star Google review.
-              </p>
             </div>
-          )}
-        </div>
 
-        {/* STEP 6: GENERATE DRAFT BUTTON */}
-        {!generatedDraft ? (
-          <button
-            type="button"
-            onClick={handleGenerateDraft}
-            disabled={generating}
-            className="w-full py-3 px-4 bg-[#1a73e8] hover:bg-[#1557b0] disabled:opacity-50 text-white rounded-xl font-semibold text-sm shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
-          >
-            {generating ? (
-              <>
-                <RefreshCw className="w-4 h-4 animate-spin" />
-                <span>Generating draft with Gemini...</span>
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4" />
-                <span>Generate Review Draft</span>
-              </>
-            )}
-          </button>
-        ) : (
-          /* Generated Draft Display Card */
-          <div className="space-y-4">
-            <div className="p-4 bg-[#f8f9fa] rounded-xl border border-[#dadce0] space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-[#1a73e8] flex items-center gap-1">
+            {/* Expandable Custom Review Textarea */}
+            {aiEnhanceEnabled && (
+              <div className="space-y-1.5 p-3.5 bg-white border border-[#1a73e8]/30 rounded-xl shadow-xs transition-all">
+                <label className="block text-xs font-semibold text-[#1a73e8] flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5" />
-                  <span>Your Review Draft</span>
-                </span>
-                <button
-                  type="button"
-                  onClick={handleGenerateDraft}
-                  disabled={generating}
-                  className="text-xs text-[#1a73e8] font-medium hover:underline flex items-center gap-1 cursor-pointer"
-                >
-                  <RefreshCw className={`w-3 h-3 ${generating ? 'animate-spin' : ''}`} />
-                  <span>Regenerate</span>
-                </button>
+                  <span>Your Custom Notes / Keywords to Include</span>
+                </label>
+                <textarea
+                  rows={3}
+                  value={customReviewNotes}
+                  onChange={(e) => setCustomReviewNotes(e.target.value)}
+                  placeholder="e.g., I bought items here, the quality was amazing and staff helped me find exactly what I needed..."
+                  className="w-full p-2.5 bg-[#f8f9fa] border border-[#dadce0] rounded-lg text-xs text-[#202124] focus:outline-none focus:border-[#1a73e8] focus:bg-white focus:ring-1 focus:ring-[#1a73e8] transition-all"
+                />
+                <p className="text-[11px] text-[#5f6368]">
+                  Gemini AI will intelligently integrate your exact notes into a natural, high-converting Google review.
+                </p>
               </div>
+            )}
+          </div>
 
-              <textarea
-                rows={4}
-                value={generatedDraft}
-                onChange={(e) => setGeneratedDraft(e.target.value)}
-                className="w-full p-3 bg-white border border-[#dadce0] rounded-lg text-xs sm:text-sm text-[#202124] leading-relaxed focus:outline-none focus:border-[#1a73e8]"
-              />
-            </div>
-
-            {/* Direct 1-Click Copy & Google Redirect Action */}
+          {/* STEP 6: GENERATE DRAFT BUTTON */}
+          {!generatedDraft ? (
             <button
               type="button"
-              onClick={handleCopyAndRedirect}
-              className={`w-full py-3.5 px-4 rounded-xl font-semibold text-sm shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                copied
-                  ? 'bg-[#1e8e3e] text-white'
-                  : 'bg-[#1a73e8] hover:bg-[#1557b0] text-white'
-              }`}
+              onClick={handleGenerateDraft}
+              disabled={generating}
+              className="w-full py-3.5 px-4 bg-[#1a73e8] hover:bg-[#1557b0] active:bg-[#174ea6] disabled:opacity-50 text-white rounded-xl font-semibold text-sm shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer"
             >
-              {copied ? (
+              {generating ? (
                 <>
-                  <Check className="w-4 h-4" />
-                  <span>Copied! Opening Google Maps...</span>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>Generating review with Google AI...</span>
                 </>
               ) : (
                 <>
-                  <Copy className="w-4 h-4" />
-                  <span>Copy Review & Post on Google</span>
-                  <ExternalLink className="w-4 h-4" />
+                  <Sparkles className="w-4 h-4" />
+                  <span>Generate Review Draft</span>
                 </>
               )}
             </button>
+          ) : (
+            /* Generated Draft Display Card styled like Google Maps Review Compose dialog */
+            <div className="space-y-4 pt-1">
+              <div className="p-4 bg-[#f8f9fa] rounded-xl border border-[#dadce0] space-y-2.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-[#1a73e8] flex items-center gap-1.5">
+                    {/* Google G logo */}
+                    <svg className="w-4 h-4" viewBox="0 0 24 24">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                    </svg>
+                    <span>Google Review Draft (Ready to Post)</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleGenerateDraft}
+                    disabled={generating}
+                    className="text-xs text-[#1a73e8] font-medium hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${generating ? 'animate-spin' : ''}`} />
+                    <span>Regenerate</span>
+                  </button>
+                </div>
 
-            {copied && (
-              <div className="text-center">
-                <a
-                  href={business?.googleReviewUrl || 'https://search.google.com/local/writereview'}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-[#1a73e8] hover:underline font-medium inline-flex items-center gap-1"
-                >
-                  <span>Did not open? Click here to open Google Maps Review box</span>
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
+                <div className="flex items-center gap-1 text-amber-500 py-0.5">
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <Star
+                      key={s}
+                      className={`w-4 h-4 ${
+                        s <= starRating
+                          ? 'fill-amber-400 text-amber-400'
+                          : 'fill-gray-200 text-gray-200'
+                      }`}
+                    />
+                  ))}
+                  <span className="text-xs text-[#5f6368] font-medium ml-1.5">
+                    {starRating}.0 Rating
+                  </span>
+                </div>
+
+                <textarea
+                  rows={4}
+                  value={generatedDraft}
+                  onChange={(e) => setGeneratedDraft(e.target.value)}
+                  className="w-full p-3 bg-white border border-[#dadce0] rounded-lg text-xs sm:text-sm text-[#202124] leading-relaxed focus:outline-none focus:border-[#1a73e8] focus:ring-1 focus:ring-[#1a73e8]"
+                />
               </div>
-            )}
 
-            <p className="text-[11px] text-center text-[#5f6368] leading-normal">
-              1. Tap above to copy your draft.<br />
-              2. Google Maps review dialog opens.<br />
-              3. Paste and post!
-            </p>
-          </div>
-        )}
+              {/* Direct 1-Click Copy & Google Redirect Action */}
+              <button
+                type="button"
+                onClick={handleCopyAndRedirect}
+                className={`w-full py-3.5 px-4 rounded-xl font-semibold text-sm shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                  copied
+                    ? 'bg-[#1e8e3e] hover:bg-[#188038] text-white'
+                    : 'bg-[#1a73e8] hover:bg-[#1557b0] active:bg-[#174ea6] text-white'
+                }`}
+              >
+                {copied ? (
+                  <>
+                    <Check className="w-4 h-4 stroke-[3]" />
+                    <span>Copied! Opening Google Maps...</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4" />
+                    <span>Copy Review & Post on Google</span>
+                    <ExternalLink className="w-4 h-4 ml-0.5" />
+                  </>
+                )}
+              </button>
+
+              {copied && (
+                <div className="text-center">
+                  <a
+                    href={business?.googleReviewUrl || 'https://search.google.com/local/writereview'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-[#1a73e8] hover:underline font-medium inline-flex items-center gap-1"
+                  >
+                    <span>Did not open automatically? Click here to open Google Maps</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                </div>
+              )}
+
+              {/* Step by step helpful guide */}
+              <div className="bg-[#f8f9fa] border border-[#dadce0] rounded-xl p-3 text-[11px] text-[#5f6368] space-y-1">
+                <div className="font-semibold text-[#202124] flex items-center gap-1.5 mb-1 text-xs">
+                  <span>How to post your review:</span>
+                </div>
+                <div className="flex items-start gap-1.5">
+                  <span className="font-bold text-[#1a73e8]">1.</span>
+                  <span>Tap the button above — your review draft is copied automatically.</span>
+                </div>
+                <div className="flex items-start gap-1.5">
+                  <span className="font-bold text-[#1a73e8]">2.</span>
+                  <span>Google Maps review box will open in a new tab.</span>
+                </div>
+                <div className="flex items-start gap-1.5">
+                  <span className="font-bold text-[#1a73e8]">3.</span>
+                  <span>Select your stars, paste the text (Ctrl+V or tap Paste), and click Post!</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Footer Branding */}
-      <div className="text-center text-[11px] text-[#5f6368] py-4">
-        Google Business Profile Review Assistant &bull; RANKORA
+      {/* Official Google Footer Trust Badge */}
+      <div className="text-center space-y-1.5 py-5">
+        <div className="inline-flex items-center gap-1.5 text-xs text-[#5f6368] font-medium">
+          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+          </svg>
+          <span>Google Business Profile Review Integration</span>
+        </div>
+        <p className="text-[11px] text-[#80868b]">
+          Verified Local Business Partner &bull; RANKORA
+        </p>
       </div>
     </div>
   );
