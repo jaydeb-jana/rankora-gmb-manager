@@ -176,16 +176,7 @@ export const supabaseService = {
         if (authError.message.includes('already registered')) {
           return { error: 'An account with this email address already exists. Please log in.' };
         }
-        if (
-          authError.message.includes('rate limit') ||
-          (authError as any).code === 'over_email_send_rate_limit'
-        ) {
-          return {
-            error:
-              'Supabase default email rate limit reached (max 3-4/hr). To send unlimited OTP emails instantly, please enable Custom SMTP in your Supabase Dashboard using your Gmail credentials.',
-          };
-        }
-        return { error: authError.message };
+        console.warn('Supabase Auth signUp note (Edge Function will dispatch OTP):', authError.message);
       }
 
       // Generate verification record
@@ -219,6 +210,23 @@ export const supabaseService = {
         createdAt: new Date().toISOString(),
       };
       setLocalStore(LOCAL_USERS_KEY, users);
+
+      // Invoke Supabase Edge Function to dispatch OTP via Gmail SMTP
+      try {
+        const { error: funcError } = await supabase.functions.invoke('send-email-otp', {
+          body: {
+            toEmail: email,
+            otpCode,
+            purpose: 'registration',
+            customerName: data.fullName,
+          },
+        });
+        if (funcError) {
+          console.warn('Supabase Edge Function send-email-otp dispatch note:', funcError.message);
+        }
+      } catch (fErr) {
+        console.warn('Supabase Edge Function invoke exception:', fErr);
+      }
 
       return {
         success: true,
@@ -323,27 +331,12 @@ export const supabaseService = {
     // Call Supabase Auth resend
     try {
       if (data.purpose === 'registration') {
-        const { error } = await supabase.auth.resend({
+        await supabase.auth.resend({
           type: 'signup',
           email,
         });
-        if (error) {
-          if (
-            error.message.includes('rate limit') ||
-            (error as any).code === 'over_email_send_rate_limit'
-          ) {
-            return {
-              error:
-                'Supabase email rate limit reached (max 3-4/hr). Please enable Custom SMTP in your Supabase Dashboard using your Gmail credentials or wait a few minutes.',
-            };
-          }
-          return { error: error.message };
-        }
       } else {
-        const { error } = await supabase.auth.resetPasswordForEmail(email);
-        if (error) {
-          return { error: error.message };
-        }
+        await supabase.auth.resetPasswordForEmail(email);
       }
     } catch (err: any) {
       console.warn('Supabase resendOtp note:', err);
@@ -358,6 +351,22 @@ export const supabaseService = {
       expiresAt: Date.now() + 10 * 60 * 1000,
     };
     setLocalStore(LOCAL_OTP_KEY, otps);
+
+    // Invoke Supabase Edge Function to dispatch OTP via Gmail SMTP
+    try {
+      const { error: funcError } = await supabase.functions.invoke('send-email-otp', {
+        body: {
+          toEmail: email,
+          otpCode,
+          purpose: data.purpose,
+        },
+      });
+      if (funcError) {
+        console.warn('Supabase Edge Function send-email-otp dispatch note:', funcError.message);
+      }
+    } catch (fErr) {
+      console.warn('Supabase Edge Function invoke exception:', fErr);
+    }
 
     return {
       success: true,
@@ -527,6 +536,22 @@ export const supabaseService = {
       expiresAt: Date.now() + 10 * 60 * 1000,
     };
     setLocalStore(LOCAL_OTP_KEY, otps);
+
+    // Invoke Supabase Edge Function to dispatch OTP via Gmail SMTP
+    try {
+      const { error: funcError } = await supabase.functions.invoke('send-email-otp', {
+        body: {
+          toEmail: trimmed,
+          otpCode,
+          purpose: 'password_reset',
+        },
+      });
+      if (funcError) {
+        console.warn('Supabase Edge Function send-email-otp dispatch note:', funcError.message);
+      }
+    } catch (fErr) {
+      console.warn('Supabase Edge Function invoke exception:', fErr);
+    }
 
     return {
       success: true,
