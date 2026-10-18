@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { CustomerUser } from '../types';
 import { api } from '../lib/api';
+import { supabase } from '../lib/supabase';
 
 interface AuthContextValue {
   user: CustomerUser | null;
@@ -58,6 +59,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     refreshUser();
+
+    // Listen for Supabase email confirmation link or session changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user && (event === 'SIGNED_IN' || event === 'USER_UPDATED')) {
+        const u = session.user;
+        const appUser: CustomerUser = {
+          id: u.id,
+          email: u.email || '',
+          fullName: (u.user_metadata?.full_name || u.user_metadata?.name || 'Business Owner'),
+          mobileNumber: u.user_metadata?.mobile_number || '',
+          businessName: u.user_metadata?.business_name || 'My Google Business',
+          isVerified: true,
+          createdAt: u.created_at,
+        };
+        const tok = session.access_token || ('sb_token_' + btoa(JSON.stringify({ userId: u.id, email: u.email })));
+        login(tok, appUser);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [token]);
 
   const login = (newToken: string, newUser: CustomerUser) => {
