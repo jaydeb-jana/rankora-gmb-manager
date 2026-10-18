@@ -1,0 +1,125 @@
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { CustomerUser } from '../types';
+import { api } from '../lib/api';
+
+interface AuthContextValue {
+  user: CustomerUser | null;
+  token: string | null;
+  isLoading: boolean;
+  impersonatorAdmin: CustomerUser | null;
+  login: (token: string, user: CustomerUser) => void;
+  logout: () => void;
+  refreshUser: () => Promise<void>;
+  impersonateUser: (targetUser: CustomerUser) => Promise<void>;
+  stopImpersonation: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<CustomerUser | null>(null);
+  const [impersonatorAdmin, setImpersonatorAdmin] = useState<CustomerUser | null>(() => {
+    return api.getImpersonatorAdmin();
+  });
+  const [token, setToken] = useState<string | null>(
+    () => localStorage.getItem('rankora_token') || localStorage.getItem('reputepulse_token')
+  );
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  const refreshUser = async () => {
+    if (!token) {
+      setUser(null);
+      setImpersonatorAdmin(null);
+      setIsLoading(false);
+      return;
+    }
+    try {
+      const data = await api.getMe();
+      if (data.user) {
+        setUser(data.user);
+        setImpersonatorAdmin(api.getImpersonatorAdmin());
+      } else {
+        localStorage.removeItem('rankora_token');
+        localStorage.removeItem('reputepulse_token');
+        setToken(null);
+        setUser(null);
+        setImpersonatorAdmin(null);
+      }
+    } catch {
+      localStorage.removeItem('rankora_token');
+      localStorage.removeItem('reputepulse_token');
+      setToken(null);
+      setUser(null);
+      setImpersonatorAdmin(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    refreshUser();
+  }, [token]);
+
+  const login = (newToken: string, newUser: CustomerUser) => {
+    localStorage.setItem('rankora_token', newToken);
+    localStorage.removeItem('reputepulse_token');
+    setToken(newToken);
+    setUser(newUser);
+    setImpersonatorAdmin(null);
+  };
+
+  const logout = () => {
+    localStorage.removeItem('rankora_token');
+    localStorage.removeItem('reputepulse_token');
+    localStorage.removeItem('rankora_impersonator_admin');
+    setToken(null);
+    setUser(null);
+    setImpersonatorAdmin(null);
+  };
+
+  const impersonateUser = async (targetUser: CustomerUser) => {
+    const res = await api.impersonateUser(targetUser.id);
+    if (res.success && res.user) {
+      setUser(res.user);
+      setImpersonatorAdmin(api.getImpersonatorAdmin());
+      const newToken = localStorage.getItem('rankora_token');
+      if (newToken) setToken(newToken);
+    }
+  };
+
+  const stopImpersonation = async () => {
+    const res = await api.stopImpersonating();
+    if (res.success && res.adminUser) {
+      setUser(res.adminUser);
+      setImpersonatorAdmin(null);
+      const newToken = localStorage.getItem('rankora_token');
+      if (newToken) setToken(newToken);
+    }
+  };
+
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        isLoading,
+        impersonatorAdmin,
+        login,
+        logout,
+        refreshUser,
+        impersonateUser,
+        stopImpersonation,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+}

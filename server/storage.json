@@ -1,0 +1,142 @@
+{
+  "users": [
+    [
+      "usr_25908e14-d2dd-41cf-9454-5aed516228d0",
+      {
+        "id": "usr_25908e14-d2dd-41cf-9454-5aed516228d0",
+        "email": "help.ecomart01@gmail.com",
+        "fullName": "Jaydeb Jana",
+        "mobileNumber": "7872490719",
+        "passwordHash": "dec3dea488a252cac1e79f4074f9f0b4:5a2e3e8ad1f48510ea16e9dd07b5be6623935e57fc5b6ab00318035e9624bb0733161a7f76bac1b765917ebbb1a7f6bcaf09522ecbd7c34b8b7165096d05bb48",
+        "isVerified": true,
+        "createdAt": "2026-10-12T18:22:37.071Z"
+      }
+    ],
+    [
+      "usr_151b4c83-384f-4fcb-9769-89012f000aab",
+      {
+        "id": "usr_151b4c83-384f-4fcb-9769-89012f000aab",
+        "email": "janajaydeb36@gmail.com",
+        "fullName": "Jaydeb Jana",
+        "mobileNumber": "8001608004",
+        "passwordHash": "dc53cce58c2a3aa1e3094858606e9ca9:e5cb70a3a5cb7d542bbefb5e6e215abf5b1fe7082a6511d4fd158cd055d44a2cb1eadce86db449fe4eeb48e65e1c368582eea02e1d9faf74df18ec7fb0edd1b8",
+        "isVerified": true,
+        "createdAt": "2026-10-16T05:29:22.584Z"
+      }
+    ]
+  ],
+  "otps": [
+    [
+      "help.ecomart01@gmail.com",
+      {
+        "email": "help.ecomart01@gmail.com",
+        "otpHash": "f266f7e28900262c3b0e514af73df300a93306f67fcc0f9435f69587ce3d51a9",
+        "purpose": "registration",
+        "expiresAt": 1792132259618,
+        "attempts": 0,
+        "verified": false
+      }
+    ],
+    [
+      "sohagifashions@gmail.com",
+      {
+        "email": "sohagifashions@gmail.com",
+        "otpHash": "cdb4c7f912e80d40eeeac97e85772a4b8dcbacd8413b3c47e653683835e7c3f2",
+        "purpose": "registration",
+        "expiresAt": 1792232561344,
+        "attempts": 0,
+        "verified": false
+      }
+    ]
+  ],
+  "businessSettings": [
+    [
+      "usr_25908e14-d2dd-41cf-9454-5aed516228d0",
+      {
+        "id": "biz-usr_25908e14-d2dd-41cf-9454-5aed516228d0",
+        "userId": "usr_25908e14-d2dd-41cf-9454-5aed516228d0",
+        "businessName": "Arventa Ventures",
+        "category": "Digital marketing agency",
+        "placeId": "",
+        "googleReviewUrl": "https://g.page/r/CbOgJVgsB5vAEAE/review",
+        "productsAndServices": "",
+        "customerExperience": "",
+        "brandTone": "luxurious",
+        "targetKeywords": [],
+        "customSlug": "arventa-ventures",
+        "languagePreferences": [
+          {
+            "code": "en",
+            "name": "English",
+            "percentage": 100
+          }
+        ],
+        "autoReplyEnabled": false,
+        "minStarRating": 4,
+        "responseDelayMinutes": 5,
+        "updatedAt": "2026-10-12T19:56:21.307Z"
+      }
+    ],
+    [
+      "usr_151b4c83-384f-4fcb-9769-89012f000aab",
+      {
+        "id": "biz-usr_151b4c83-384f-4fcb-9769-89012f000aab",
+        "userId": "usr_151b4c83-384f-4fcb-9769-89012f000aab",
+        "businessName": "Jaydeb Jana's Business",
+        "category": "Local Service & Retail",
+        "placeId": "",
+        "googleReviewUrl": "",
+        "productsAndServices": "",
+        "customerExperience": "",
+        "brandTone": "friendly",
+        "targetKeywords": [],
+        "customSlug": "jaydeb-jana-0aab",
+        "languagePreferences": [
+          {
+            "code": "en",
+            "name": "English",
+            "percentage": 100
+          }
+        ],
+        "autoReplyEnabled": false,
+        "autoReplyMode": "approval",
+        "minStarRating": 4,
+        "responseDelayMinutes": 5,
+        "updatedAt": "2026-10-16T05:29:22.584Z"
+      }
+    ]
+  ],
+  "googleAccounts": [
+    [
+      "usr_25908e14-d2dd-41cf-9454-5aed516228d0",
+      {
+        "connected": true,
+        "accountId": "accounts/google_29a9274e",
+        "accountName": "Authorized Google Business Account",
+        "locationId": "locations/39096232",
+        "locationName": "Verified Google Business Storefront",
+        "placeId": "ChIJPlaceId_dc3ef721",
+        "address": "Verified Google Maps Business Location",
+        "rating": 4.9,
+        "reviewCount": 46,
+        "connectedAt": "2026-10-12T19:16:47.467Z"
+      }
+    ],
+    [
+      "usr_151b4c83-384f-4fcb-9769-89012f000aab",
+      {
+        "connected": false
+      }
+    ]
+  ],
+  "reviews": [
+    [
+      "usr_25908e14-d2dd-41cf-9454-5aed516228d0",
+      []
+    ],
+    [
+      "usr_151b4c83-384f-4fcb-9769-89012f000aab",
+      []
+    ]
+  ]
+}
