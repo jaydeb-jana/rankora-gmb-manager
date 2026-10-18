@@ -12,6 +12,7 @@ import {
   ThumbsUp,
   MapPin,
   Star,
+  AlertCircle,
 } from 'lucide-react';
 import { api } from '../../lib/api';
 
@@ -157,6 +158,7 @@ export function PublicReviewPage({ slug, onBackToDashboard }: PublicReviewPagePr
   // 6. Draft generation states
   const [generating, setGenerating] = useState<boolean>(false);
   const [generatedDraft, setGeneratedDraft] = useState<string>('');
+  const [generationError, setGenerationError] = useState<string | null>(null);
   const [copied, setCopied] = useState<boolean>(false);
 
   useEffect(() => {
@@ -204,6 +206,7 @@ export function PublicReviewPage({ slug, onBackToDashboard }: PublicReviewPagePr
 
   const handleGenerateDraft = async () => {
     setGenerating(true);
+    setGenerationError(null);
     try {
       const res = await api.generateDraft({
         slug,
@@ -218,12 +221,17 @@ export function PublicReviewPage({ slug, onBackToDashboard }: PublicReviewPagePr
 
       if (res.success && res.draft) {
         setGeneratedDraft(res.draft);
+        setGenerationError(null);
+      } else {
+        setGeneratedDraft('');
+        setGenerationError(
+          res.error || 'Failed to generate review draft. Please check your Gemini API key and try again.'
+        );
       }
-    } catch {
-      setGeneratedDraft(
-        `I had a wonderful experience at ${business?.businessName || 'this business'}! ${
-          selectedChips.length > 0 ? selectedChips.join(' and ') + ' really stood out.' : ''
-        } Highly recommend them!`
+    } catch (err: any) {
+      setGeneratedDraft('');
+      setGenerationError(
+        err?.message || 'A network or API error occurred while connecting to Gemini AI.'
       );
     } finally {
       setGenerating(false);
@@ -598,6 +606,19 @@ export function PublicReviewPage({ slug, onBackToDashboard }: PublicReviewPagePr
               </div>
             )}
           </div>
+
+          {/* Error Message Display if API call fails or key is missing/invalid */}
+          {generationError && (
+            <div className="p-4 bg-[#fce8e6] border border-[#f5c2c7] rounded-xl text-xs space-y-1.5 transition-all">
+              <div className="flex items-center gap-2 font-bold text-[#c5221f]">
+                <AlertCircle className="w-4 h-4 shrink-0 text-[#d93025]" />
+                <span>AI Review Generation Error</span>
+              </div>
+              <p className="text-[#3c4043] leading-relaxed pl-6">
+                {generationError}
+              </p>
+            </div>
+          )}
 
           {/* STEP 6: GENERATE DRAFT BUTTON */}
           {!generatedDraft ? (

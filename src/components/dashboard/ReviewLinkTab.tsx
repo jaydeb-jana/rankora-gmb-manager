@@ -20,7 +20,7 @@ import { useToast } from '../../context/ToastContext';
 import { createQrWithCenterLogo } from '../../lib/qrWithLogo';
 import { renderStandToCanvas } from '../../lib/drawStandCanvas';
 import { StandPreviewCard } from './StandPreviewCard';
-import { GOOGLE_QR_REMOTE_URL } from '../../constants/qrLogo';
+import { GOOGLE_QR_CENTER_LOGO, GOOGLE_QR_REMOTE_URL } from '../../constants/qrLogo';
 
 interface ReviewLinkTabProps {
   settings: BusinessSettings;
@@ -293,7 +293,7 @@ export function ReviewLinkTab({
         if (isMounted && data.qrDataUrl) {
           const composited = await createQrWithCenterLogo(
             data.qrDataUrl,
-            settings.businessLogo || GOOGLE_QR_CENTER_LOGO
+            GOOGLE_QR_CENTER_LOGO
           );
           if (isMounted) {
             setDigitalQrDataUrl(composited);
@@ -310,7 +310,7 @@ export function ReviewLinkTab({
     return () => {
       isMounted = false;
     };
-  }, [fullReviewUrl, digitalQrColor, settings.businessLogo]);
+  }, [fullReviewUrl, digitalQrColor]);
 
   // Stand QR code color dynamically synchronizes with the selected template's matching theme color
   const standQrColor = selectedTemplate.qrColor || '#1a73e8';
@@ -324,7 +324,7 @@ export function ReviewLinkTab({
         if (isMounted && data.qrDataUrl) {
           const composited = await createQrWithCenterLogo(
             data.qrDataUrl,
-            settings.businessLogo || GOOGLE_QR_CENTER_LOGO
+            GOOGLE_QR_CENTER_LOGO
           );
           if (isMounted) {
             setStandQrDataUrl(composited);

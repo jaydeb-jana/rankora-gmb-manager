@@ -125,59 +125,28 @@ ${options.reviewWritingRules ? `Specific Review Writing Rules to obey:\n${option
 Language required: ${lang}.
 Keep it concise, authentic, friendly, and approximately 2-4 sentences.`;
 
-  if (ai) {
-    try {
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.8-flash',
-        contents: prompt,
-        config: {
-          systemInstruction,
-          temperature: 0.8,
-        },
-      });
+  if (!ai) {
+    throw new Error('Gemini API key is not configured for this business. Please add a valid API key in the dashboard API settings.');
+  }
 
-      const text = response.text?.trim();
-      if (text) {
-        return text.replace(/^"|"$/g, '');
-      }
-    } catch (err: any) {
-      console.warn('[Gemini Draft Client Notice]', err?.message);
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.8-flash',
+      contents: prompt,
+      config: {
+        systemInstruction,
+        temperature: 0.8,
+      },
+    });
+
+    const text = response.text?.trim();
+    if (text) {
+      return text.replace(/^"|"$/g, '');
     }
+    throw new Error('Gemini API returned an empty response. Please try again.');
+  } catch (err: any) {
+    throw new Error(formatGeminiErrorMessage(err));
   }
-
-  // Fallback high-quality template if Gemini API key is missing or offline
-  const langLower = (options.language || 'English').toLowerCase();
-  const customSnippet = options.customNotes?.trim() ? ` ${options.customNotes.trim()}.` : '';
-
-  if (langLower.includes('hindi') || langLower === 'hi') {
-    const chipsHindi =
-      options.highlightChips.length > 0
-        ? `खासकर ${options.highlightChips.slice(0, 2).join(' और ')} बहुत ही बेहतरीन था।`
-        : 'यहाँ की सेवा और कस्टमर सपोर्ट वाकई तारीफ के काबिल है।';
-    return `${options.businessName} पर मेरा अनुभव बेहद शानदार रहा! ${chipsHindi}${customSnippet} मैं यहाँ दोबारा आना पसंद करूँगा और सभी को ज़रूर रेकमेंड करता हूँ।`;
-  }
-
-  if (langLower.includes('bengali') || langLower.includes('bangla') || langLower === 'bn') {
-    const chipsBn =
-      options.highlightChips.length > 0
-        ? `বিশেষ করে ${options.highlightChips.slice(0, 2).join(' এবং ')} দারুণ লেগেছে।`
-        : 'এখানকার সেবা ও ব্যবহার সত্যিই প্রশংসনীয়।';
-    return `${options.businessName}-এ আমার অভিজ্ঞতা অত্যন্ত চমৎকার ছিল! ${chipsBn}${customSnippet} ভবিষ্যতে নিশ্চিতভাবে আবার আসব এবং সবাইকে রেকমেন্ড করছি।`;
-  }
-
-  if (langLower.includes('marathi') || langLower === 'mr') {
-    return `${options.businessName} येथे माझा अनुभव खूप छान राहिला! उत्तम सेवा आणि दर्जेदार काम.${customSnippet} मी नक्कीच इतरांना शिफारस करेन.`;
-  }
-
-  if (langLower.includes('gujarati') || langLower === 'gu') {
-    return `${options.businessName} ખાતે મારો અનુભવ ખૂબ જ ઉત્તમ રહ્યો! સર્વિસ અને ક્વોલિટી ખૂબ જ સારી છે.${customSnippet}`;
-  }
-
-  const chipMentions =
-    options.highlightChips.length > 0
-      ? `The ${options.highlightChips.slice(0, 2).join(' and ')} really stood out to me.`
-      : 'The attention to detail and care were fantastic.';
-  return `I had a wonderful experience at ${options.businessName}! ${chipMentions}${customSnippet} Definitely coming back again and highly recommend them to anyone looking for great ${options.category?.toLowerCase() || 'service'}.`;
 }
 
 export interface GenerateReplyOptions {

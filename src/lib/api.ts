@@ -279,6 +279,14 @@ export const api = {
     const env = (import.meta as any).env || {};
     const key = (biz?.geminiApiKey || env.VITE_GEMINI_API_KEY || '').trim();
 
+    if (!key) {
+      return {
+        success: false,
+        draft: '',
+        error: 'Gemini AI API key is not configured for this business. Please add a valid API key in the business dashboard.',
+      };
+    }
+
     try {
       const draft = await generateCustomerReviewDraft({
         businessName: data.businessName || biz?.businessName || 'Business',

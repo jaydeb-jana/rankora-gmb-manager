@@ -13,6 +13,7 @@ export interface CustomerUser {
   businessName?: string;
   planId?: string;
   lastLogin?: string;
+  password?: string;
 }
 
 export interface PricingPlan {

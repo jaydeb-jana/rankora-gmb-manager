@@ -92,6 +92,7 @@ export const REAL_INITIAL_USERS: Array<{
       status: 'active',
       planId: 'ultra-plan',
       businessName: 'Arventa Ventures',
+      password: 'Jaydeb@123',
       createdAt: '2026-10-12T18:22:37.071Z',
     },
     settings: {
@@ -128,6 +129,7 @@ export const REAL_INITIAL_USERS: Array<{
       status: 'active',
       planId: 'pro-plan',
       businessName: "Jaydeb Jana's Business",
+      password: 'Jaydeb@123',
       createdAt: '2026-10-16T05:29:22.584Z',
     },
     settings: {
@@ -158,6 +160,7 @@ export const REAL_INITIAL_USERS: Array<{
       status: 'active',
       planId: 'pro-plan',
       businessName: 'Sohagi Fashions',
+      password: 'Jaydeb@123',
       createdAt: '2026-10-14T10:15:00.000Z',
     },
     settings: {
@@ -188,6 +191,7 @@ export const REAL_INITIAL_USERS: Array<{
       status: 'active',
       planId: 'pro-plan',
       businessName: 'Jana',
+      password: 'Jaydeb@123',
       createdAt: '2026-10-18T11:00:00.000Z',
     },
     settings: {
@@ -195,7 +199,7 @@ export const REAL_INITIAL_USERS: Array<{
       userId: 'usr_mateyij394_proguidex',
       businessName: 'Jana',
       category: 'Local Service & Retail',
-      googleReviewUrl: 'http://localhost:3000/business-profile',
+      googleReviewUrl: 'https://g.page/r/CbOgJVgsB5vAEAE/review',
       customSlug: 'jana-store',
       brandTone: 'friendly',
       languagePreferences: [{ code: 'en', name: 'English', percentage: 100 }],
@@ -1353,6 +1357,7 @@ export const supabaseService = {
             status: 'active',
             businessName: bizMap.get(p.id) || `${p.full_name || 'My'}'s Business`,
             planId: 'pro-plan',
+            password: usersRecord[email]?.password || p.raw_user_meta_data?.password || 'Jaydeb@123',
           };
         });
       }
@@ -1384,6 +1389,7 @@ export const supabaseService = {
         status: u.status || existing?.status || 'active',
         businessName: userSettings?.businessName || u.businessName || existing?.businessName || `${u.fullName || 'Business Owner'}'s Business`,
         planId: u.planId || existing?.planId || 'pro-plan',
+        password: u.password || existing?.password || 'Jaydeb@123',
       };
     });
 
@@ -1394,7 +1400,10 @@ export const supabaseService = {
         realUsersMap[email] = {
           ...user,
           businessName: settings?.businessName || user.businessName || `${user.fullName}'s Business`,
+          password: user.password || usersRecord[email]?.password || 'Jaydeb@123',
         };
+      } else if (!realUsersMap[email].password) {
+        realUsersMap[email].password = user.password || usersRecord[email]?.password || 'Jaydeb@123';
       }
     });
 

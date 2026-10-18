@@ -8,7 +8,9 @@ import {
   Search,
   UserCheck,
   UserX,
-  LogIn,
+  Eye,
+  EyeOff,
+  Copy,
   Edit,
   Trash2,
   Plus,
@@ -37,7 +39,7 @@ interface AdminDashboardProps {
 
 export function AdminDashboard({ onUserImpersonated }: AdminDashboardProps = {}) {
   const navigate = useNavigate();
-  const { user, impersonateUser } = useAuth();
+  const { user } = useAuth();
   const { showSuccess, showError } = useToast();
 
   const [activeAdminTab, setActiveAdminTab] = useState<'users' | 'plans' | 'system'>('users');
@@ -49,6 +51,16 @@ export function AdminDashboard({ onUserImpersonated }: AdminDashboardProps = {})
   // Filters & Search for Users
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'suspended'>('all');
+
+  // Show Real Password state per user
+  const [revealedPasswords, setRevealedPasswords] = useState<Record<string, boolean>>({});
+
+  const togglePasswordVisibility = (userId: string) => {
+    setRevealedPasswords((prev) => ({
+      ...prev,
+      [userId]: !prev[userId],
+    }));
+  };
 
   // Modals state
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState<boolean>(false);
@@ -161,18 +173,6 @@ export function AdminDashboard({ onUserImpersonated }: AdminDashboardProps = {})
     }
   };
 
-  const handleImpersonate = async (targetUser: CustomerUser) => {
-    try {
-      await impersonateUser(targetUser);
-      showSuccess(`Logged into ${targetUser.fullName}'s account without password.`);
-      if (onUserImpersonated) {
-        onUserImpersonated();
-      }
-      navigate('/');
-    } catch {
-      showError('Failed to enter user account.');
-    }
-  };
 
 
   const handleCreateUser = async (e: React.FormEvent) => {
@@ -634,17 +634,43 @@ export function AdminDashboard({ onUserImpersonated }: AdminDashboardProps = {})
                             {/* Actions */}
                             <td className="py-3.5 px-4 text-right">
                               <div className="flex items-center justify-end gap-1.5">
-                                {/* Impersonate / Login as User */}
+                                {/* Show / View Real User Password */}
                                 {!isSuperAdmin && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleImpersonate(u)}
-                                    title="Login as this User"
-                                    className="px-2.5 py-1.5 bg-[#e8f0fe] hover:bg-[#d2e3fc] text-[#1a73e8] rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
-                                  >
-                                    <LogIn className="w-3.5 h-3.5" />
-                                    <span className="hidden md:inline">Login As</span>
-                                  </button>
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => togglePasswordVisibility(u.id)}
+                                      title={revealedPasswords[u.id] ? 'Hide password' : 'Show user real password'}
+                                      className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs border ${
+                                        revealedPasswords[u.id]
+                                          ? 'bg-[#e6f4ea] text-[#137333] border-[#ceead6]'
+                                          : 'bg-[#e8f0fe] hover:bg-[#d2e3fc] text-[#1a73e8] border-[#d2e3fc]'
+                                      }`}
+                                    >
+                                      {revealedPasswords[u.id] ? (
+                                        <EyeOff className="w-3.5 h-3.5 shrink-0" />
+                                      ) : (
+                                        <Eye className="w-3.5 h-3.5 shrink-0" />
+                                      )}
+                                      <span className={revealedPasswords[u.id] ? 'font-mono font-extrabold tracking-wide' : ''}>
+                                        {revealedPasswords[u.id] ? (u.password || 'Jaydeb@123') : 'Show Password'}
+                                      </span>
+                                    </button>
+
+                                    {revealedPasswords[u.id] && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          navigator.clipboard.writeText(u.password || 'Jaydeb@123');
+                                          showSuccess(`Password for ${u.fullName} copied!`);
+                                        }}
+                                        title="Copy Password"
+                                        className="p-1.5 bg-white hover:bg-[#f1f3f4] border border-[#dadce0] text-[#3c4043] rounded-lg transition-all cursor-pointer shadow-2xs"
+                                      >
+                                        <Copy className="w-3.5 h-3.5" />
+                                      </button>
+                                    )}
+                                  </div>
                                 )}
 
 
