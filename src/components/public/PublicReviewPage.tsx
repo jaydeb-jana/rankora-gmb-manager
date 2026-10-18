@@ -13,6 +13,8 @@ import {
   MapPin,
   Star,
   AlertCircle,
+  ShieldAlert,
+  MessageCircle,
 } from 'lucide-react';
 import { api } from '../../lib/api';
 
@@ -27,6 +29,7 @@ interface PublicBusinessData {
   category: string;
   customSlug: string;
   googleReviewUrl: string;
+  isSuspended?: boolean;
   productsAndServices?: string;
   services?: string[];
   customerExperience?: string;
@@ -208,7 +211,19 @@ export function PublicReviewPage({ slug, onBackToDashboard }: PublicReviewPagePr
     setGenerating(true);
     setGenerationError(null);
     try {
-      const res = await api.generateDraft({
+      const timeoutPromise = new Promise<{ success: boolean; draft: string; error: string }>((resolve) =>
+        setTimeout(
+          () =>
+            resolve({
+              success: false,
+              draft: '',
+              error: 'AI request timed out after 15 seconds. Please check your internet connection or Gemini API key quota and try again.',
+            }),
+          15000
+        )
+      );
+
+      const draftPromise = api.generateDraft({
         slug,
         businessName: business?.businessName,
         category: business?.category,
@@ -218,6 +233,8 @@ export function PublicReviewPage({ slug, onBackToDashboard }: PublicReviewPagePr
         customNotes: aiEnhanceEnabled ? customReviewNotes : undefined,
         language: selectedLanguage,
       });
+
+      const res = await Promise.race([draftPromise, timeoutPromise]);
 
       if (res.success && res.draft) {
         setGeneratedDraft(res.draft);
@@ -301,6 +318,107 @@ export function PublicReviewPage({ slug, onBackToDashboard }: PublicReviewPagePr
             </button>
           )}
         </div>
+      </div>
+    );
+  }
+
+  if (business?.isSuspended) {
+    const partnerWhatsAppNumber = '+91 7872490719';
+    const partnerRawNumber = '917872490719';
+    const waUrl = `https://wa.me/${partnerRawNumber}?text=${encodeURIComponent(
+      `Hello Partner,\nI was visiting the review page for "${business.businessName}" (${slug}), but it shows suspended by Google Policy Review.\nPlease help resolve this legal/policy violation.`
+    )}`;
+
+    return (
+      <div className="min-h-screen bg-[#f8f9fa] flex flex-col justify-between p-4 sm:p-6">
+        {onBackToDashboard && (
+          <div className="max-w-md mx-auto w-full mb-3 flex items-center justify-between text-xs">
+            <button
+              onClick={onBackToDashboard}
+              className="flex items-center gap-1.5 text-[#5f6368] hover:text-[#202124] font-medium transition-colors cursor-pointer"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              <span>Back to Dashboard</span>
+            </button>
+          </div>
+        )}
+
+        <div className="max-w-lg mx-auto w-full bg-white border-2 border-[#d93025] rounded-2xl shadow-md overflow-hidden my-auto">
+          {/* Google Official 4-Color Canopy Stripe */}
+          <div className="grid grid-cols-4 h-1.5 w-full">
+            <div className="bg-[#4285F4]"></div>
+            <div className="bg-[#EA4335]"></div>
+            <div className="bg-[#FBBC04]"></div>
+            <div className="bg-[#34A853]"></div>
+          </div>
+
+          <div className="bg-[#d93025] px-5 py-4 text-white flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <ShieldAlert className="w-6 h-6 text-white shrink-0" />
+              <div>
+                <h2 className="text-base font-bold">সাইট ও পর্যালোচনা লিংক স্থগিত</h2>
+                <p className="text-[11px] text-red-100">Official Google Policy Enforcement Notice</p>
+              </div>
+            </div>
+            <span className="px-2.5 py-0.5 rounded-full bg-white text-[#d93025] text-[10px] font-extrabold uppercase">
+              SUSPENDED
+            </span>
+          </div>
+
+          <div className="p-6 space-y-5 text-center">
+            {business.businessLogo && (
+              <div className="w-16 h-16 rounded-xl bg-white border border-[#dadce0] shadow-2xs mx-auto overflow-hidden p-1.5 grayscale opacity-75">
+                <img src={business.businessLogo} alt={business.businessName} className="w-full h-full object-contain" />
+              </div>
+            )}
+
+            <div>
+              <h1 className="text-lg font-bold text-[#202124]">
+                {business.businessName}
+              </h1>
+              <p className="text-xs text-[#5f6368] mt-0.5 font-medium">
+                Google Business Profile Service
+              </p>
+            </div>
+
+            <div className="bg-[#fce8e6] border border-[#fad2cf] rounded-xl p-4 text-left space-y-2">
+              <div className="text-xs font-bold text-[#b31412] flex items-center gap-1.5">
+                <AlertCircle className="w-4 h-4 shrink-0 text-[#d93025]" />
+                <span>আইনি ও পলিসি নির্দেশিকা লঙ্ঘনের কারণে বন্ধ</span>
+              </div>
+              <p className="text-xs text-[#3c4043] leading-relaxed">
+                অফিসিয়াল Google নীতি পর্যালোচনা টিম ও Google এর কর্মচারীদের নিরীক্ষার পর দেখা গেছে যে এই সাইটটি আইনি নির্দেশিকা বা Google পলিসি লঙ্ঘন করেছে। ফলে সাময়িকভাবে সমস্ত পরিষেবা বন্ধ রাখা হয়েছে।
+              </p>
+            </div>
+
+            {/* Contact to Partner */}
+            <div className="bg-gradient-to-br from-[#f0fdf4] to-[#e6f4ea] border-2 border-[#34A853] rounded-xl p-5 text-left space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="px-2.5 py-0.5 rounded-full bg-[#1e8e3e] text-white text-[11px] font-bold">
+                  কন্টাক্ট টু পার্টনার (CONTACT TO PARTNER)
+                </span>
+                <span className="text-[11px] text-[#1e8e3e] font-semibold">Arventa Ventures</span>
+              </div>
+              <p className="text-xs text-[#3c4043]">
+                অ্যাকাউন্ট পুনরুদ্ধার ও সহায়তার জন্য পার্টনারের সাথে সরাসরি হোয়াটসঅ্যাপে যোগাযোগ করুন:
+              </p>
+              <a
+                href={waUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full py-3 rounded-lg bg-[#25D366] hover:bg-[#20ba59] text-white font-bold text-xs sm:text-sm shadow-sm transition-colors"
+              >
+                <MessageCircle className="w-4 h-4 fill-white" />
+                <span>WhatsApp: {partnerWhatsAppNumber}</span>
+                <ExternalLink className="w-3.5 h-3.5 ml-1" />
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <footer className="text-center text-[11px] text-[#5f6368] mt-6">
+          Google Business Profile Trust &amp; Safety Network &bull; Partner: Arventa Ventures
+        </footer>
       </div>
     );
   }

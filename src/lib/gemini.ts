@@ -1,5 +1,11 @@
 import { GoogleGenAI } from '@google/genai';
 
+export const CANDIDATE_GEMINI_MODELS = [
+  'gemini-2.5-flash',
+  'gemini-2.0-flash',
+  'gemini-1.5-flash',
+];
+
 export function getAiClient(apiKeyOverride?: string): GoogleGenAI | null {
   const apiKey = (apiKeyOverride || (import.meta as any).env?.VITE_GEMINI_API_KEY || '').trim();
   if (!apiKey) return null;
@@ -49,7 +55,7 @@ export function formatGeminiErrorMessage(rawError: any): string {
     }
   } catch {}
 
-  return 'Invalid API Key. Verification failed. Please check your key from Google AI Studio.';
+  return msg.length > 0 && msg.length < 150 ? msg : 'Gemini API request failed. Please check your key from Google AI Studio.';
 }
 
 export async function testGeminiApiKey(apiKey: string): Promise<{ valid: boolean; message: string }> {
@@ -61,14 +67,26 @@ export async function testGeminiApiKey(apiKey: string): Promise<{ valid: boolean
     const ai = new GoogleGenAI({
       apiKey: key,
     });
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
-      contents: 'Respond with OK',
-    });
-    if (response && response.text) {
-      return { valid: true, message: 'API key verified and active.' };
+    let lastErr: any = null;
+    for (const model of CANDIDATE_GEMINI_MODELS) {
+      try {
+        const response = await ai.models.generateContent({
+          model,
+          contents: 'Respond with OK',
+        });
+        if (response && response.text) {
+          return { valid: true, message: `API key verified and active (${model}).` };
+        }
+      } catch (err: any) {
+        lastErr = err;
+        const msg = err?.message || '';
+        if (msg.includes('404') || msg.includes('not found') || msg.includes('NOT_FOUND')) {
+          continue;
+        }
+        return { valid: false, message: formatGeminiErrorMessage(err) };
+      }
     }
-    return { valid: false, message: 'Received empty response from Gemini API.' };
+    return { valid: false, message: formatGeminiErrorMessage(lastErr) };
   } catch (err: any) {
     return { valid: false, message: formatGeminiErrorMessage(err) };
   }
@@ -129,24 +147,33 @@ Keep it concise, authentic, friendly, and approximately 2-4 sentences.`;
     throw new Error('Gemini API key is not configured for this business. Please add a valid API key in the dashboard API settings.');
   }
 
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
-      contents: prompt,
-      config: {
-        systemInstruction,
-        temperature: 0.8,
-      },
-    });
+  let lastError: any = null;
+  for (const model of CANDIDATE_GEMINI_MODELS) {
+    try {
+      const response = await ai.models.generateContent({
+        model,
+        contents: prompt,
+        config: {
+          systemInstruction,
+          temperature: 0.8,
+        },
+      });
 
-    const text = response.text?.trim();
-    if (text) {
-      return text.replace(/^"|"$/g, '');
+      const text = response.text?.trim();
+      if (text) {
+        return text.replace(/^"|"$/g, '');
+      }
+    } catch (err: any) {
+      lastError = err;
+      const msg = err?.message || '';
+      if (msg.includes('404') || msg.includes('not found') || msg.includes('NOT_FOUND')) {
+        continue;
+      }
+      throw new Error(formatGeminiErrorMessage(err));
     }
-    throw new Error('Gemini API returned an empty response. Please try again.');
-  } catch (err: any) {
-    throw new Error(formatGeminiErrorMessage(err));
   }
+
+  throw new Error(lastError ? formatGeminiErrorMessage(lastError) : 'Gemini API returned an empty response. Please try again.');
 }
 
 export interface GenerateReplyOptions {
@@ -183,26 +210,32 @@ Customer Review Text: "${options.reviewText}"
 Please craft a thoughtful, brand-aligned public response to this review.`;
 
   if (ai) {
-    try {
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.8-flash',
-        contents: prompt,
-        config: {
-          systemInstruction,
-          temperature: 0.7,
-        },
-      });
+    for (const model of CANDIDATE_GEMINI_MODELS) {
+      try {
+        const response = await ai.models.generateContent({
+          model,
+          contents: prompt,
+          config: {
+            systemInstruction,
+            temperature: 0.7,
+          },
+        });
 
-      const text = response.text?.trim();
-      if (text) {
-        return text.replace(/^"|"$/g, '');
+        const text = response.text?.trim();
+        if (text) {
+          return text.replace(/^"|"$/g, '');
+        }
+      } catch (err: any) {
+        const msg = err?.message || '';
+        if (msg.includes('404') || msg.includes('not found') || msg.includes('NOT_FOUND')) {
+          continue;
+        }
+        break;
       }
-    } catch (err: any) {
-      console.warn('[Gemini Reply Client Notice]', err?.message);
     }
   }
 
-  // Graceful fallback
+  // Fallback polite owner response
   if (options.starRating >= 4) {
     return `Thank you so much for the glowing review, ${options.authorName}! Our team at ${options.businessName} is thrilled you enjoyed your experience. We truly appreciate your support and look forward to welcoming you back soon!`;
   } else {

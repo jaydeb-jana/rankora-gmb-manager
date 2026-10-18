@@ -262,6 +262,31 @@ export function DocsTab() {
               )}
             </button>
 
+            {verificationResult.status === 'failed' && (
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!apiKey.trim()) return;
+                  try {
+                    await api.saveGeminiApiKey(apiKey.trim());
+                    setInitialSavedKey(apiKey.trim());
+                    setIsConfigured(true);
+                    showSuccess('Saved Gemini API key directly to your account profile.');
+                    setVerificationResult({
+                      status: 'success',
+                      message: 'Key saved directly to your account profile.',
+                    });
+                    await loadKeyStatus();
+                  } catch (e: any) {
+                    showError(e?.message || 'Failed to save key.');
+                  }
+                }}
+                className="px-4 py-2.5 bg-white hover:bg-[#f8f9fa] border border-[#dadce0] text-[#1a73e8] font-medium rounded-lg text-xs transition-colors cursor-pointer"
+              >
+                Save Directly (Skip Test)
+              </button>
+            )}
+
             {isKeyModified && (
               <span className="text-xs font-medium text-[#b06000] bg-[#fef7e0] px-3 py-1.5 rounded-lg border border-[#feefc3] inline-flex items-center gap-1">
                 <AlertCircle className="w-3.5 h-3.5 text-[#b06000]" />

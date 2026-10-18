@@ -277,7 +277,18 @@ export const api = {
     }
 
     const env = (import.meta as any).env || {};
-    const key = (biz?.geminiApiKey || env.VITE_GEMINI_API_KEY || '').trim();
+    let key = (biz?.geminiApiKey || '').trim();
+    if (!key) {
+      try {
+        const { settings: currentSettings } = await supabaseService.getBusinessSettings();
+        if (currentSettings?.geminiApiKey) {
+          key = currentSettings.geminiApiKey.trim();
+        }
+      } catch {}
+    }
+    if (!key) {
+      key = (env.VITE_GEMINI_API_KEY || '').trim();
+    }
 
     if (!key) {
       return {

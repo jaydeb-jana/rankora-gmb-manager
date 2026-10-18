@@ -29,6 +29,7 @@ import { ContactTab } from './components/dashboard/ContactTab';
 import { SecurityTab } from './components/dashboard/SecurityTab';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { PublicReviewPage } from './components/public/PublicReviewPage';
+import { SuspendedAccountNotice } from './components/dashboard/SuspendedAccountNotice';
 import { BusinessSettings, CustomerReview, GoogleBusinessAccount } from './types';
 import { api } from './lib/api';
 import {
@@ -322,6 +323,17 @@ function CustomerPortalContent() {
           </div>
         </footer>
       </div>
+    );
+  }
+
+  // Check if account has been suspended by Google Compliance / Admin
+  if (user && user.status === 'suspended') {
+    return (
+      <SuspendedAccountNotice
+        user={user}
+        businessName={currentSettings.businessName}
+        onLogout={logout}
+      />
     );
   }
 
