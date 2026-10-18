@@ -172,11 +172,23 @@ export const supabaseService = {
         },
       });
 
-      if (authError && !authError.message.includes('already registered')) {
-        console.warn('Supabase Auth notice, fallback enabled:', authError.message);
+      if (authError) {
+        if (authError.message.includes('already registered')) {
+          return { error: 'An account with this email address already exists. Please log in.' };
+        }
+        if (
+          authError.message.includes('rate limit') ||
+          (authError as any).code === 'over_email_send_rate_limit'
+        ) {
+          return {
+            error:
+              'Supabase default email rate limit reached (max 3-4/hr). To send unlimited OTP emails instantly, please enable Custom SMTP in your Supabase Dashboard using your Gmail credentials.',
+          };
+        }
+        return { error: authError.message };
       }
 
-      // Generate verification OTP code
+      // Generate verification record
       const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
       const otps = getLocalStore<Record<string, any>>(LOCAL_OTP_KEY, {});
       otps[email] = {
@@ -210,7 +222,7 @@ export const supabaseService = {
 
       return {
         success: true,
-        message: `A 6-digit verification code has been dispatched to ${email}. Please check your inbox.`,
+        message: `A 6-digit verification code has been dispatched to ${email}. Please check your inbox and spam folder.`,
       };
     } catch (err: any) {
       return { error: err.message || 'Failed to complete registration.' };
@@ -228,19 +240,41 @@ export const supabaseService = {
     const otps = getLocalStore<Record<string, any>>(LOCAL_OTP_KEY, {});
     const record = otps[email];
 
-    // Check OTP
-    if (!record || record.purpose !== data.purpose) {
-      return { error: 'No active verification code found for this email. Please request a new code.' };
+    // Attempt verification via Supabase Auth
+    let supabaseVerified = false;
+    let authUser: any = null;
+    let authSession: any = null;
+
+    try {
+      const { data: vData, error: vError } = await supabase.auth.verifyOtp({
+        email,
+        token: data.otpCode.trim(),
+        type: data.purpose === 'registration' ? 'signup' : 'recovery',
+      });
+      if (!vError && vData?.user) {
+        supabaseVerified = true;
+        authUser = vData.user;
+        authSession = vData.session;
+      }
+    } catch (e) {
+      console.warn('Supabase Auth verifyOtp note:', e);
     }
 
-    if (Date.now() > record.expiresAt) {
-      delete otps[email];
-      setLocalStore(LOCAL_OTP_KEY, otps);
-      return { error: 'Verification code has expired. Please request a new code.' };
-    }
+    // Verify against record if not directly verified via Supabase Auth
+    if (!supabaseVerified) {
+      if (!record || record.purpose !== data.purpose) {
+        return { error: 'Invalid or expired verification code. Please request a new code.' };
+      }
 
-    if (record.code !== data.otpCode.trim()) {
-      return { error: 'Invalid verification code. Please check and try again.' };
+      if (Date.now() > record.expiresAt) {
+        delete otps[email];
+        setLocalStore(LOCAL_OTP_KEY, otps);
+        return { error: 'Verification code has expired. Please request a new code.' };
+      }
+
+      if (record.code !== data.otpCode.trim()) {
+        return { error: 'Invalid verification code. Please check your email and try again.' };
+      }
     }
 
     if (data.purpose === 'registration') {
@@ -285,6 +319,36 @@ export const supabaseService = {
 
   async resendOtp(data: { email: string; purpose: string }): Promise<{ success?: boolean; message?: string; error?: string }> {
     const email = data.email.toLowerCase().trim();
+
+    // Call Supabase Auth resend
+    try {
+      if (data.purpose === 'registration') {
+        const { error } = await supabase.auth.resend({
+          type: 'signup',
+          email,
+        });
+        if (error) {
+          if (
+            error.message.includes('rate limit') ||
+            (error as any).code === 'over_email_send_rate_limit'
+          ) {
+            return {
+              error:
+                'Supabase email rate limit reached (max 3-4/hr). Please enable Custom SMTP in your Supabase Dashboard using your Gmail credentials or wait a few minutes.',
+            };
+          }
+          return { error: error.message };
+        }
+      } else {
+        const { error } = await supabase.auth.resetPasswordForEmail(email);
+        if (error) {
+          return { error: error.message };
+        }
+      }
+    } catch (err: any) {
+      console.warn('Supabase resendOtp note:', err);
+    }
+
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
     const otps = getLocalStore<Record<string, any>>(LOCAL_OTP_KEY, {});
     otps[email] = {
@@ -297,7 +361,7 @@ export const supabaseService = {
 
     return {
       success: true,
-      message: `A fresh 6-digit code has been dispatched to ${email}. Please check your inbox.`,
+      message: `A fresh 6-digit code has been dispatched to ${email}. Please check your inbox and spam folder.`,
     };
   },
 
@@ -438,8 +502,22 @@ export const supabaseService = {
   async forgotPassword(email: string) {
     const trimmed = email.toLowerCase().trim();
     try {
-      await supabase.auth.resetPasswordForEmail(trimmed);
-    } catch {}
+      const { error } = await supabase.auth.resetPasswordForEmail(trimmed);
+      if (error) {
+        if (
+          error.message.includes('rate limit') ||
+          (error as any).code === 'over_email_send_rate_limit'
+        ) {
+          return {
+            error:
+              'Supabase email limit exceeded (max 3-4/hr). Please configure Custom SMTP in your Supabase Dashboard using your Gmail credentials or wait a few minutes.',
+          };
+        }
+        return { error: error.message };
+      }
+    } catch (err: any) {
+      console.warn('Supabase resetPasswordForEmail note:', err);
+    }
 
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
     const otps = getLocalStore<Record<string, any>>(LOCAL_OTP_KEY, {});
@@ -452,7 +530,7 @@ export const supabaseService = {
 
     return {
       success: true,
-      message: `A password reset code has been dispatched to ${trimmed}. Please check your inbox.`,
+      message: `A password reset code has been dispatched to ${trimmed}. Please check your inbox and spam folder.`,
     };
   },
 
