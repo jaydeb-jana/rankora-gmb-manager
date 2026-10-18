@@ -271,11 +271,11 @@ export const api = {
     let biz: any = null;
     if (data.slug) {
       const res = await supabaseService.getPublicBusiness(data.slug);
-      biz = res?.business;
+      biz = res?.business || res;
     }
 
     const env = (import.meta as any).env || {};
-    const key = (env.VITE_GEMINI_API_KEY || '').trim();
+    const key = (biz?.geminiApiKey || env.VITE_GEMINI_API_KEY || '').trim();
 
     try {
       const draft = await generateCustomerReviewDraft({

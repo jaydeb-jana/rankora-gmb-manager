@@ -939,6 +939,7 @@ export const supabaseService = {
           ],
           shopAiDetails: data.google_account_info?.shopAiDetails || '',
           reviewWritingRules: data.google_account_info?.reviewWritingRules || '',
+          geminiApiKey: data.google_account_info?.geminiApiKey || '',
         };
       }
     } catch (err) {
@@ -966,6 +967,7 @@ export const supabaseService = {
           ],
           shopAiDetails: biz.shopAiDetails || '',
           reviewWritingRules: biz.reviewWritingRules || '',
+          geminiApiKey: biz.geminiApiKey || (biz as any).googleAccountInfo?.geminiApiKey || '',
         };
       }
     }
