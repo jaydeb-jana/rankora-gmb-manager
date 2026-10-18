@@ -546,8 +546,20 @@ export function AdminDashboard({ onUserImpersonated }: AdminDashboardProps = {})
                   <tbody className="divide-y divide-[#dadce0]">
                     {filteredUsers.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="py-10 text-center text-[#5f6368]">
-                          No user records match your criteria.
+                        <td colSpan={5} className="py-12 text-center text-[#5f6368]">
+                          <div className="max-w-sm mx-auto space-y-2">
+                            <Users className="w-8 h-8 mx-auto text-[#dadce0]" />
+                            <p className="text-sm font-bold text-[#202124]">
+                              {searchQuery || statusFilter !== 'all'
+                                ? 'No user records match your search filter.'
+                                : 'No customer accounts registered yet.'}
+                            </p>
+                            <p className="text-xs text-[#5f6368] leading-relaxed">
+                              {searchQuery || statusFilter !== 'all'
+                                ? 'Try adjusting your search terms or filter.'
+                                : 'All fake demo data has been purged. When real customers register via the sign-up form or when you click "+ Add New User", their live profiles will appear here.'}
+                            </p>
+                          </div>
                         </td>
                       </tr>
                     ) : (

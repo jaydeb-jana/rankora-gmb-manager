@@ -76,82 +76,28 @@ export const DEFAULT_PRICING_PLANS: PricingPlan[] = [
   },
 ];
 
-function seedDemoUsersIfNeeded(): void {
+function purgeDemoUsersIfPresent(): void {
   try {
     const raw = localStorage.getItem(LOCAL_USERS_KEY);
-    const users = raw ? JSON.parse(raw) : {};
-    if (Object.keys(users).length === 0) {
-      const demoUsers = [
-        {
-          id: 'usr_arventa_cafe',
-          email: 'contact@arventacafe.com',
-          fullName: 'Rahul Sharma',
-          businessName: 'Arventa Artisan Cafe & Roastery',
-          mobileNumber: '+91 9830112233',
-          password: 'password123',
-          isVerified: true,
-          role: 'user',
-          status: 'active',
-          planId: 'pro-plan',
-          createdAt: '2026-02-10T10:30:00.000Z',
-        },
-        {
-          id: 'usr_apex_motors',
-          email: 'support@apexmotors.in',
-          fullName: 'Vikramaditya Roy',
-          businessName: 'Apex Supercar Care & Detailing',
-          mobileNumber: '+91 9874556677',
-          password: 'password123',
-          isVerified: true,
-          role: 'user',
-          status: 'active',
-          planId: 'ultra-plan',
-          createdAt: '2026-02-18T14:15:00.000Z',
-        },
-        {
-          id: 'usr_royal_dental',
-          email: 'manager@royaldental.com',
-          fullName: 'Dr. Priya Sen',
-          businessName: 'Royal Aesthetic Dental Clinic',
-          mobileNumber: '+91 9123445566',
-          password: 'password123',
-          isVerified: true,
-          role: 'user',
-          status: 'active',
-          planId: 'pro-plan',
-          createdAt: '2026-03-01T09:00:00.000Z',
-        },
-      ];
-      for (const u of demoUsers) {
-        users[u.email] = u;
-        const allSettings = getLocalStore<Record<string, any>>(LOCAL_SETTINGS_KEY, {});
-        if (!allSettings[u.id]) {
-          allSettings[u.id] = {
-            id: 'biz-' + u.id,
-            userId: u.id,
-            businessName: u.businessName,
-            category: 'Retail & Service',
-            placeId: 'ChIJ' + u.id.slice(-6),
-            googleReviewUrl: 'https://g.page/r/' + u.businessName.toLowerCase().replace(/[^a-z0-9]/g, '-'),
-            productsAndServices: 'High quality collections and customer care',
-            customerExperience: 'Clean, modern, and highly customer-friendly store environment.',
-            brandTone: 'friendly',
-            targetKeywords: ['best store', 'friendly staff', 'great collection'],
-            customSlug: u.businessName.toLowerCase().replace(/[^a-z0-9]/g, '-'),
-            languagePreferences: [{ code: 'en', name: 'English', percentage: 100 }],
-            autoReplyEnabled: true,
-            autoReplyMode: 'approval',
-            minStarRating: 4,
-            responseDelayMinutes: 5,
-            updatedAt: new Date().toISOString(),
-          };
-          setLocalStore(LOCAL_SETTINGS_KEY, allSettings);
-        }
+    if (!raw) return;
+    const users = JSON.parse(raw);
+    const demoEmails = [
+      'contact@arventacafe.com',
+      'support@apexmotors.in',
+      'manager@royaldental.com',
+    ];
+    let changed = false;
+    for (const email of demoEmails) {
+      if (users[email]) {
+        delete users[email];
+        changed = true;
       }
+    }
+    if (changed) {
       setLocalStore(LOCAL_USERS_KEY, users);
     }
   } catch (e) {
-    console.warn('Seed demo users notice:', e);
+    console.warn('Purge demo users notice:', e);
   }
 }
 
@@ -391,8 +337,8 @@ export const supabaseService = {
     }
 
     try {
-      // Check if user is suspended in local store
-      seedDemoUsersIfNeeded();
+      // Clean any stale demo users if present
+      purgeDemoUsersIfPresent();
       const users = getLocalStore<Record<string, any>>(LOCAL_USERS_KEY, {});
       const user = users[email];
 
@@ -796,36 +742,7 @@ export const supabaseService = {
     } catch {}
 
     const allReviews = getLocalStore<Record<string, CustomerReview[]>>(LOCAL_REVIEWS_KEY, {});
-    let reviews = allReviews[userId];
-    if (!reviews) {
-      reviews = [
-        {
-          id: 'rev-1',
-          userId,
-          authorName: 'Aarav Sharma',
-          starRating: 5,
-          reviewText: 'Outstanding experience! The staff was incredibly welcoming and helped me pick the right collection. Will definitely visit again.',
-          reviewDate: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-          replyText: 'Thank you so much for the 5-star review, Aarav! We are delighted to hear you loved our collection and team service. Looking forward to seeing you again!',
-          replyStatus: 'published',
-          replyDate: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
-          autoReplied: true,
-          aiGeneratedTone: 'friendly',
-        },
-        {
-          id: 'rev-2',
-          userId,
-          authorName: 'Sneha Roy',
-          starRating: 5,
-          reviewText: 'Great product quality and quick checkout. Very pleasant experience overall.',
-          reviewDate: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-          replyStatus: 'pending',
-          autoReplied: false,
-        },
-      ];
-      allReviews[userId] = reviews;
-      setLocalStore(LOCAL_REVIEWS_KEY, allReviews);
-    }
+    const reviews = allReviews[userId] || [];
     return { reviews };
   },
 
@@ -1070,31 +987,84 @@ export const supabaseService = {
     };
   },
 
-  // --------------------------------------------------------------------------
-  // ADMIN CONTROL CENTER & USER MANAGEMENT
-  // --------------------------------------------------------------------------
-  getAllUsers(): { users: CustomerUser[] } {
-    seedDemoUsersIfNeeded();
+  async getAllUsers(): Promise<{ users: CustomerUser[] }> {
+    purgeDemoUsersIfPresent();
+    const realUsersMap: Record<string, CustomerUser> = {};
+
+    // 1. Fetch real registered users from Supabase PostgreSQL profiles table
+    try {
+      const { data: profiles, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!error && Array.isArray(profiles) && profiles.length > 0) {
+        // Also fetch business settings for these users
+        const { data: bizList } = await supabase
+          .from('business_settings')
+          .select('user_id, business_name, custom_slug');
+
+        const bizMap = new Map<string, string>();
+        if (Array.isArray(bizList)) {
+          bizList.forEach((b: any) => {
+            if (b.user_id && b.business_name) {
+              bizMap.set(b.user_id, b.business_name);
+            }
+          });
+        }
+
+        profiles.forEach((p: any) => {
+          if (!p.email) return;
+          const email = p.email.toLowerCase().trim();
+          if (email === 'contact@arventacafe.com' || email === 'support@apexmotors.in' || email === 'manager@royaldental.com') {
+            return;
+          }
+          realUsersMap[email] = {
+            id: p.id,
+            email: p.email,
+            fullName: p.full_name || 'Business Owner',
+            mobileNumber: p.mobile_number || '',
+            isVerified: true,
+            createdAt: p.created_at || new Date().toISOString(),
+            role: email === 'info@arventaventures.online' ? 'admin' : 'user',
+            status: 'active',
+            businessName: bizMap.get(p.id) || `${p.full_name || 'My'}'s Business`,
+            planId: 'pro-plan',
+          };
+        });
+      }
+    } catch (e) {
+      console.warn('Supabase profiles query error:', e);
+    }
+
+    // 2. Combine with locally registered or admin-created users
     const usersRecord = getLocalStore<Record<string, any>>(LOCAL_USERS_KEY, {});
     const allSettings = getLocalStore<Record<string, BusinessSettings>>(LOCAL_SETTINGS_KEY, {});
 
-    const usersList: CustomerUser[] = Object.values(usersRecord).map((u: any) => {
+    Object.values(usersRecord).forEach((u: any) => {
+      if (!u || !u.email) return;
+      const email = u.email.toLowerCase().trim();
+      // Skip fake demo emails completely
+      if (email === 'contact@arventacafe.com' || email === 'support@apexmotors.in' || email === 'manager@royaldental.com') {
+        return;
+      }
       const userSettings = allSettings[u.id];
-      return {
-        id: u.id,
+      const existing = realUsersMap[email];
+      realUsersMap[email] = {
+        id: u.id || existing?.id || 'usr_' + Math.random().toString(36).slice(2, 8),
         email: u.email,
-        fullName: u.fullName || 'Business Owner',
-        mobileNumber: u.mobileNumber || '',
-        isVerified: u.isVerified ?? true,
-        createdAt: u.createdAt || new Date().toISOString(),
-        role: u.role || 'user',
-        status: u.status || 'active',
-        businessName: userSettings?.businessName || u.businessName || `${u.fullName}'s Business`,
-        planId: u.planId || 'pro-plan',
+        fullName: u.fullName || existing?.fullName || 'Business Owner',
+        mobileNumber: u.mobileNumber || existing?.mobileNumber || '',
+        isVerified: u.isVerified ?? existing?.isVerified ?? true,
+        createdAt: u.createdAt || existing?.createdAt || new Date().toISOString(),
+        role: u.role || existing?.role || (email === 'info@arventaventures.online' ? 'admin' : 'user'),
+        status: u.status || existing?.status || 'active',
+        businessName: userSettings?.businessName || u.businessName || existing?.businessName || `${u.fullName || 'Business Owner'}'s Business`,
+        planId: u.planId || existing?.planId || 'pro-plan',
       };
     });
 
-    return { users: usersList };
+    return { users: Object.values(realUsersMap) };
   },
 
   updateUser(
@@ -1238,13 +1208,13 @@ export const supabaseService = {
   // --------------------------------------------------------------------------
   // ADMIN IMPERSONATION
   // --------------------------------------------------------------------------
-  impersonateUser(targetUserId: string): { success: boolean; user?: CustomerUser; error?: string } {
+  async impersonateUser(targetUserId: string): Promise<{ success: boolean; user?: CustomerUser; error?: string }> {
     const adminUser = getLocalStore<CustomerUser | null>(LOCAL_CURRENT_USER_KEY, null);
     if (!adminUser) {
       return { success: false, error: 'No active session to impersonate from.' };
     }
 
-    const { users } = this.getAllUsers();
+    const { users } = await this.getAllUsers();
     const target = users.find((u) => u.id === targetUserId);
     if (!target) {
       return { success: false, error: 'Target user not found.' };
