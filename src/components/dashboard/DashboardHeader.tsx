@@ -1,7 +1,9 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Menu, LogOut, ShieldCheck, Crown } from 'lucide-react';
 import { CustomerUser, GoogleBusinessAccount } from '../../types';
 import { DashboardTab } from './DashboardNav';
+import { useAuth } from '../../context/AuthContext';
 
 interface DashboardHeaderProps {
   user: CustomerUser;
@@ -39,6 +41,8 @@ export function DashboardHeader({
   onNavigateToHome,
   onNavigateToAdmin,
 }: DashboardHeaderProps) {
+  const navigate = useNavigate();
+  const { impersonatorAdmin, stopImpersonation } = useAuth();
   const currentTabName = TAB_TITLES[activeTab] || 'Dashboard';
   const isSuperAdmin = user.role === 'admin' || user.email === 'info@arventaventures.online';
 
@@ -67,17 +71,25 @@ export function DashboardHeader({
               }`}
               title={onNavigateToHome ? 'Go to Home & Overview' : undefined}
             >
-              {/* Google Business Profile 4-color canopy icon */}
-              <div className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-white border border-[#dadce0] shadow-2xs shrink-0 group-hover:border-[#1a73e8] transition-colors">
-                <svg className="w-5 h-5 sm:w-6 sm:h-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M4 10V19C4 19.5523 4.44772 20 5 20H19C19.5523 20 20 19.5523 20 19V10" stroke="#1A73E8" strokeWidth="2" strokeLinecap="round"/>
-                  <path d="M2 7L4.5 4H19.5L22 7L20 10H4L2 7Z" fill="#1A73E8"/>
-                  <path d="M7 10C7 11.1046 6.10457 12 5 12C3.89543 12 3 10" stroke="#EA4335" strokeWidth="2"/>
-                  <path d="M11 10C11 11.1046 10.1046 12 9 12C7.89543 12 7 10" stroke="#FBBC04" strokeWidth="2"/>
-                  <path d="M15 10C15 11.1046 14.1046 12 13 12C11.8954 12 11 10" stroke="#34A853" strokeWidth="2"/>
-                  <path d="M19 10C19 11.1046 18.1046 12 17 12C15.8954 12 15 10" stroke="#1A73E8" strokeWidth="2"/>
-                  <path d="M9 20V14H15V20" stroke="#1A73E8" strokeWidth="2"/>
-                </svg>
+              {/* Google Business Profile canopy icon OR Custom Store Logo */}
+              <div className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-white border border-[#dadce0] shadow-2xs shrink-0 group-hover:border-[#1a73e8] transition-colors overflow-hidden">
+                {businessLogo ? (
+                  <img
+                    src={businessLogo}
+                    alt={businessName || 'Store Logo'}
+                    className="w-full h-full object-contain p-0.5"
+                  />
+                ) : (
+                  <svg className="w-5 h-5 sm:w-6 sm:h-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M4 10V19C4 19.5523 4.44772 20 5 20H19C19.5523 20 20 19.5523 20 19V10" stroke="#1A73E8" strokeWidth="2" strokeLinecap="round"/>
+                    <path d="M2 7L4.5 4H19.5L22 7L20 10H4L2 7Z" fill="#1A73E8"/>
+                    <path d="M7 10C7 11.1046 6.10457 12 5 12C3.89543 12 3 10" stroke="#EA4335" strokeWidth="2"/>
+                    <path d="M11 10C11 11.1046 10.1046 12 9 12C7.89543 12 7 10" stroke="#FBBC04" strokeWidth="2"/>
+                    <path d="M15 10C15 11.1046 14.1046 12 13 12C11.8954 12 11 10" stroke="#34A853" strokeWidth="2"/>
+                    <path d="M19 10C19 11.1046 18.1046 12 17 12C15.8954 12 15 10" stroke="#1A73E8" strokeWidth="2"/>
+                    <path d="M9 20V14H15V20" stroke="#1A73E8" strokeWidth="2"/>
+                  </svg>
+                )}
               </div>
 
               <div className="min-w-0">
@@ -97,7 +109,22 @@ export function DashboardHeader({
           </div>
 
           {/* Right: User Profile Pill & Account Menu */}
-          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            {/* Quick Switcher back to Admin Console if opened from Admin */}
+            {impersonatorAdmin && (
+              <button
+                type="button"
+                onClick={async () => {
+                  await stopImpersonation();
+                  navigate('/admin');
+                }}
+                className="px-2.5 py-1.5 bg-[#e8f0fe] hover:bg-[#d2e3fc] text-[#1a73e8] border border-[#d2e3fc] rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 shadow-2xs"
+                title="Return to Super Admin Console"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-[#1a73e8]" />
+                <span className="hidden sm:inline">Admin Console</span>
+              </button>
+            )}
 
             {/* User Profile Pill */}
             <div className="flex items-center gap-2 sm:gap-3 pl-2 sm:pl-3 border-l border-[#dadce0]">

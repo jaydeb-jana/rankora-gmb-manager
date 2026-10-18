@@ -115,6 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           id: 'admin_arventa_super',
           email: 'info@arventaventures.online',
           fullName: 'Arventa Admin',
+          mobileNumber: '+91 7872490719',
           role: 'admin',
           isVerified: true,
           status: 'active',

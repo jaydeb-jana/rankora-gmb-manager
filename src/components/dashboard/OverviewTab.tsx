@@ -50,9 +50,20 @@ export function OverviewTab({
               </span>
             </div>
 
-            <h1 className="text-2xl sm:text-3xl font-bold text-[#202124] tracking-tight">
-              {settings.businessName || 'Your Business Location'}
-            </h1>
+            <div className="flex items-center gap-3">
+              {settings.businessLogo && (
+                <div className="w-12 h-12 rounded-xl border border-[#dadce0] p-1 bg-white shadow-2xs shrink-0 overflow-hidden flex items-center justify-center">
+                  <img
+                    src={settings.businessLogo}
+                    alt={settings.businessName || 'Business Logo'}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+              )}
+              <h1 className="text-2xl sm:text-3xl font-bold text-[#202124] tracking-tight">
+                {settings.businessName || 'Your Business Location'}
+              </h1>
+            </div>
 
             <p className="text-sm text-[#5f6368] leading-relaxed">
               Automate customer review generation with in-store QR code stands and direct customers seamlessly to your Google Review submission page.

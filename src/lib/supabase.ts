@@ -1249,6 +1249,7 @@ export const supabaseService = {
           customSlug: data.custom_slug,
           googleReviewUrl: data.google_review_url,
           productsAndServices: data.products_and_services || '',
+          services: data.google_account_info?.services || (data.products_and_services ? data.products_and_services.split(/[,;\n]+/).map((s: string) => s.trim()).filter(Boolean) : []),
           customerExperience: data.customer_experience || '',
           brandTone: data.brand_tone || 'friendly',
           targetKeywords: data.target_keywords || [],
@@ -1258,7 +1259,7 @@ export const supabaseService = {
           ],
           shopAiDetails: data.google_account_info?.shopAiDetails || '',
           reviewWritingRules: data.google_account_info?.reviewWritingRules || '',
-          geminiApiKey: data.google_account_info?.geminiApiKey || '',
+          geminiApiKey: data.google_account_info?.geminiApiKey || (data as any).gemini_api_key || '',
         };
       }
     } catch (err) {
@@ -1277,6 +1278,7 @@ export const supabaseService = {
           customSlug: biz.customSlug,
           googleReviewUrl: biz.googleReviewUrl,
           productsAndServices: biz.productsAndServices || '',
+          services: biz.services || (biz.productsAndServices ? biz.productsAndServices.split(/[,;\n]+/).map((s: string) => s.trim()).filter(Boolean) : []),
           customerExperience: biz.customerExperience || '',
           brandTone: biz.brandTone || 'friendly',
           targetKeywords: biz.targetKeywords || [],
@@ -1546,7 +1548,8 @@ export const supabaseService = {
       adminUser = {
         id: 'admin_arventa_super',
         email: ADMIN_CREDENTIALS.email,
-        fullName: ADMIN_CREDENTIALS.name,
+        fullName: ADMIN_CREDENTIALS.fullName,
+        mobileNumber: ADMIN_CREDENTIALS.mobileNumber,
         role: 'admin',
         isVerified: true,
         status: 'active',
@@ -1589,7 +1592,8 @@ export const supabaseService = {
       adminUser = {
         id: 'admin_arventa_super',
         email: ADMIN_CREDENTIALS.email,
-        fullName: ADMIN_CREDENTIALS.name,
+        fullName: ADMIN_CREDENTIALS.fullName,
+        mobileNumber: ADMIN_CREDENTIALS.mobileNumber,
         role: 'admin',
         isVerified: true,
         status: 'active',
@@ -1604,7 +1608,7 @@ export const supabaseService = {
     localStorage.setItem('rankora_token', token);
     localStorage.removeItem('reputepulse_token');
 
-    return { success: true, adminUser };
+    return { success: true, adminUser: adminUser || undefined };
   },
 
   getImpersonatorAdmin(): CustomerUser | null {

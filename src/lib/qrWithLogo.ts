@@ -30,21 +30,27 @@ export async function createQrWithCenterLogo(
 
     ctx.drawImage(qrImg, 0, 0, targetSize, targetSize);
 
-    // 2. Load center logo (try remote URL, fallback to local base64)
+    // 2. Load center logo (try customLogoUrl, fallback to embedded base64)
     const logoImg = new Image();
-    logoImg.crossOrigin = 'anonymous';
+    const source = (customLogoUrl && customLogoUrl.trim()) ? customLogoUrl.trim() : GOOGLE_QR_CENTER_LOGO;
+    if (!source.startsWith('data:')) {
+      logoImg.crossOrigin = 'anonymous';
+    }
 
     const loadPromise = new Promise<void>((resolve) => {
       logoImg.onload = () => resolve();
       logoImg.onerror = () => {
         // Fallback to embedded base64 if remote fails or has CORS issues
         if (logoImg.src !== GOOGLE_QR_CENTER_LOGO) {
+          try {
+            logoImg.removeAttribute('crossorigin');
+          } catch {}
           logoImg.src = GOOGLE_QR_CENTER_LOGO;
         } else {
           resolve();
         }
       };
-      logoImg.src = customLogoUrl || GOOGLE_QR_REMOTE_URL;
+      logoImg.src = source;
     });
 
     await loadPromise;

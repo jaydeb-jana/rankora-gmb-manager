@@ -291,7 +291,10 @@ export function ReviewLinkTab({
     api.getQrCode(fullReviewUrl, digitalQrColor)
       .then(async (data) => {
         if (isMounted && data.qrDataUrl) {
-          const composited = await createQrWithCenterLogo(data.qrDataUrl, GOOGLE_QR_REMOTE_URL);
+          const composited = await createQrWithCenterLogo(
+            data.qrDataUrl,
+            settings.businessLogo || GOOGLE_QR_CENTER_LOGO
+          );
           if (isMounted) {
             setDigitalQrDataUrl(composited);
           }
@@ -307,7 +310,7 @@ export function ReviewLinkTab({
     return () => {
       isMounted = false;
     };
-  }, [fullReviewUrl, digitalQrColor]);
+  }, [fullReviewUrl, digitalQrColor, settings.businessLogo]);
 
   // Stand QR code color dynamically synchronizes with the selected template's matching theme color
   const standQrColor = selectedTemplate.qrColor || '#1a73e8';
@@ -319,7 +322,10 @@ export function ReviewLinkTab({
     api.getQrCode(fullReviewUrl, standQrColor)
       .then(async (data) => {
         if (isMounted && data.qrDataUrl) {
-          const composited = await createQrWithCenterLogo(data.qrDataUrl, GOOGLE_QR_REMOTE_URL);
+          const composited = await createQrWithCenterLogo(
+            data.qrDataUrl,
+            settings.businessLogo || GOOGLE_QR_CENTER_LOGO
+          );
           if (isMounted) {
             setStandQrDataUrl(composited);
           }

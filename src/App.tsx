@@ -343,29 +343,6 @@ function CustomerPortalContent() {
   return (
     <div className="min-h-screen bg-[#f8f9fa] flex flex-col justify-between">
       <div>
-        {/* Sticky Impersonation Alert Banner */}
-        {impersonatorAdmin && (
-          <div className="bg-[#fef7e0] border-b border-[#f9ab00]/40 px-4 py-2.5 flex items-center justify-between gap-3 text-xs z-50 sticky top-0 shadow-xs">
-            <div className="flex items-center gap-2 text-[#b06000]">
-              <ShieldCheck className="w-4 h-4 text-[#e37400] shrink-0" />
-              <span>
-                <strong>Admin Impersonation Mode:</strong> Currently managing store for{' '}
-                <strong>{user?.fullName}</strong> ({user?.email}) as Super Admin.
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={async () => {
-                await stopImpersonation();
-                navigate('/admin');
-              }}
-              className="px-3.5 py-1.5 bg-[#1a73e8] hover:bg-[#1557b0] text-white rounded-lg text-xs font-bold transition-all shadow-2xs cursor-pointer shrink-0"
-            >
-              Exit Impersonation &amp; Return to Admin Panel
-            </button>
-          </div>
-        )}
-
         <DashboardHeader
           user={user}
           googleAccount={googleAccount}
