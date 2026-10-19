@@ -221,15 +221,18 @@ export function PublicReviewPage({ slug, onBackToDashboard }: PublicReviewPagePr
   const speakBengaliVoiceGuidance = (customMsg?: string) => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
     try {
+      if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+      }
       window.speechSynthesis.cancel();
 
       const message =
         customMsg ||
-        'আপনার জন্য একটি সুন্দর রিভিউ স্বয়ংক্রিয়ভাবে তৈরি করে কপি করে দেওয়া হয়েছে। এবার গুগল ম্যাপসের রিভিউ বক্সে এটি পেস্ট করে পোস্ট করে দিন।';
+        'স্বয়ংক্রিয়ভাবে আপনার জন্য একটি ভালো রিভিউ তৈরি করে কপি করে দেওয়া হচ্ছে। গুগল ম্যাপসের রিভিউ সেকশনে এটি পেস্ট করে দিন।';
 
       const utterance = new SpeechSynthesisUtterance(message);
       utterance.lang = 'bn-BD';
-      utterance.rate = 0.92;
+      utterance.rate = 0.95;
       utterance.pitch = 1.0;
 
       const voices = window.speechSynthesis.getVoices();
@@ -345,6 +348,11 @@ export function PublicReviewPage({ slug, onBackToDashboard }: PublicReviewPagePr
   };
 
   const handleGenerateDraft = async () => {
+    // 1. Speak IMMEDIATELY on the button click interaction without waiting for network / AI response
+    speakBengaliVoiceGuidance(
+      'স্বয়ংক্রিয়ভাবে আপনার জন্য একটি ভালো রিভিউ তৈরি করে কপি করে দেওয়া হচ্ছে। গুগল ম্যাপসের রিভিউ সেকশনে এটি পেস্ট করে দিন।'
+    );
+
     setGenerating(true);
     setGenerationError(null);
     try {
@@ -393,11 +401,6 @@ export function PublicReviewPage({ slug, onBackToDashboard }: PublicReviewPagePr
         } catch {
           setCopied(true);
         }
-
-        // 2. Play browser built-in AI voice guidance in Bengali
-        speakBengaliVoiceGuidance(
-          'আপনার জন্য একটি সুন্দর রিভিউ স্বয়ংক্রিয়ভাবে তৈরি করে কপি করে দেওয়া হয়েছে। এবার গুগল ম্যাপসের রিভিউ বক্সে এটি পেস্ট করে পোস্ট করে দিন।'
-        );
       } else {
         setGeneratedDraft('');
         setGenerationError(
