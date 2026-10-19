@@ -33,6 +33,7 @@ import { PublicReviewPage } from './components/public/PublicReviewPage';
 import { SuspendedAccountNotice } from './components/dashboard/SuspendedAccountNotice';
 import { BusinessSettings, CustomerReview, GoogleBusinessAccount } from './types';
 import { api } from './lib/api';
+import { updatePageSeo } from './lib/seo';
 import {
   Building2,
   Sparkles,
@@ -121,6 +122,21 @@ function CustomerPortalContent() {
       navigate('/', { replace: true });
     }
   }, [user, impersonatorAdmin, location.pathname, navigate]);
+
+  // Dynamic SEO & Metadata
+  useEffect(() => {
+    if (!user) {
+      updatePageSeo({
+        title: 'Google Business Profile Review Automation & Growth Platform',
+        canonicalUrl: typeof window !== 'undefined' ? `${window.location.origin}/` : undefined,
+      });
+    } else {
+      updatePageSeo({
+        title: `${businessSettings?.businessName || 'Business'} Dashboard`,
+        noIndex: true,
+      });
+    }
+  }, [user, businessSettings?.businessName]);
 
   const loadCustomerData = async () => {
     if (!token) return;
@@ -261,9 +277,9 @@ function CustomerPortalContent() {
         </header>
 
         {/* Hero & Authentication Form */}
-        <div className="relative z-10 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-10 items-center my-auto py-6 sm:py-8">
+        <main role="main" className="relative z-10 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-10 items-center my-auto py-6 sm:py-8">
           {/* Left Column: Value Proposition & Live Interactive AI Showcase */}
-          <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
+          <section aria-labelledby="main-heading" className="lg:col-span-7 space-y-6 text-center lg:text-left">
             {/* Top Pill */}
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-blue-50 to-indigo-50 text-[#1a73e8] text-xs font-bold border border-blue-200/80 shadow-2xs">
               <Sparkles className="w-3.5 h-3.5 text-[#1a73e8] animate-pulse" />
@@ -271,7 +287,7 @@ function CustomerPortalContent() {
             </div>
 
             {/* Headline */}
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#202124] tracking-tight leading-[1.15]">
+            <h1 id="main-heading" className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#202124] tracking-tight leading-[1.15]">
               Grow Your Business with{' '}
               <span className="bg-gradient-to-r from-[#1a73e8] via-[#1557b0] to-[#0d47a1] bg-clip-text text-transparent">
                 5-Star Google Reviews
@@ -388,13 +404,13 @@ function CustomerPortalContent() {
                 </div>
               </div>
             </div>
-          </div>
+          </section>
 
           {/* Right Column: Customer Auth Form Card */}
-          <div className="lg:col-span-5 flex justify-center w-full">
+          <section aria-label="Customer Sign In and Registration" className="lg:col-span-5 flex justify-center w-full">
             <AuthModal />
-          </div>
-        </div>
+          </section>
+        </main>
 
         {/* Footer */}
         <footer className="relative z-10 max-w-7xl mx-auto w-full pt-6 pb-2 text-center text-xs text-[#5f6368] border-t border-gray-200/80">
@@ -545,6 +561,13 @@ function AdminPortalContent() {
     showSuccess('Admin logged out successfully.');
     navigate('/', { replace: true });
   };
+
+  useEffect(() => {
+    updatePageSeo({
+      title: 'Super Admin Control Center',
+      noIndex: true,
+    });
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#f8f9fa] flex flex-col justify-between">

@@ -1,0 +1,26 @@
+{
+  "name": "RANKORA - Google Business Profile Growth Platform",
+  "short_name": "RANKORA",
+  "description": "Customer review generation, AI replies, QR counter stands & Google Business Profile SEO management.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1a73e8",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/google-qr-logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/google-qr-logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

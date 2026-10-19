@@ -1,0 +1,18 @@
+# Robots.txt for RANKORA - Google Business Profile Growth Platform
+# Allow search engines to crawl public marketing pages and customer review portals
+# Disallow private user dashboards and super admin consoles
+
+User-agent: *
+Allow: /
+Allow: /review/
+Allow: /docs
+Disallow: /dashboard/
+Disallow: /admin/
+Disallow: /settings/
+Disallow: /security/
+
+# Crawl-delay for polite crawling
+Crawl-delay: 1
+
+# XML Sitemap Location
+Sitemap: https://rankora.arventaventures.online/sitemap.xml

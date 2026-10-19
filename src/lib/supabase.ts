@@ -684,12 +684,7 @@ export const supabaseService = {
       const user = users[email];
 
       if (user && user.status === 'suspended') {
-        const isPasswordCorrect =
-          data.password === user.password ||
-          data.password === 'Jaydeb@123' ||
-          data.password === 'password123';
-
-        if (isPasswordCorrect) {
+        if (data.password === user.password) {
           const suspendedUser: CustomerUser = {
             id: user.id || 'usr_' + Math.random().toString(36).slice(2, 8),
             email: user.email,
@@ -761,7 +756,7 @@ export const supabaseService = {
         };
       }
 
-      // Check registered users in local Supabase store
+      // 2. Check registered users in local Supabase store
       if (user && user.password === data.password) {
         const token = 'sb_token_' + btoa(JSON.stringify({ userId: user.id, email: user.email }));
         localStorage.setItem('rankora_token', token);
@@ -786,28 +781,26 @@ export const supabaseService = {
         };
       }
 
-      // Provision account if logging in for first time with valid format
-      const defaultUser: CustomerUser = {
-        id: 'usr_' + btoa(email).slice(0, 8),
-        email,
-        fullName: 'Business Owner',
-        mobileNumber: '+91 9876543210',
-        isVerified: true,
-        role: 'user',
-        status: 'active',
-        planId: 'pro-plan',
-        createdAt: new Date().toISOString(),
-      };
-      const token = 'sb_token_' + btoa(JSON.stringify({ userId: defaultUser.id, email }));
-      localStorage.setItem('rankora_token', token);
-      localStorage.removeItem('reputepulse_token');
-      setLocalStore(LOCAL_CURRENT_USER_KEY, defaultUser);
-      await this.initDefaultBusinessSettings(defaultUser.id, 'My Google Business');
+      // If user exists in local registered accounts but password did not match:
+      if (user) {
+        return { error: 'Invalid password. Please check your credentials.' };
+      }
 
+      // If Supabase authentication returned an error:
+      if (authError) {
+        if (
+          authError.message.includes('Invalid login credentials') ||
+          authError.message.includes('invalid_grant') ||
+          authError.message.includes('Email not confirmed')
+        ) {
+          return { error: 'Invalid email or password. Please verify your credentials or create a new account.' };
+        }
+        return { error: authError.message };
+      }
+
+      // Account not found
       return {
-        success: true,
-        token,
-        user: defaultUser,
+        error: 'No account found with this email address. Please click "Create account" to register.',
       };
     } catch (err: any) {
       return { error: err.message || 'Login failed.' };

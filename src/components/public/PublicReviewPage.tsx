@@ -20,7 +20,8 @@ import {
   Star,
 } from 'lucide-react';
 import { api } from '../../lib/api';
-import { LoadingScreen } from '../common/LoadingScreen';
+import { LoadingScreen, GoogleReviewLoadingScreen } from '../common/LoadingScreen';
+import { updatePageSeo } from '../../lib/seo';
 
 interface PublicReviewPageProps {
   slug: string;
@@ -199,6 +200,9 @@ export function PublicReviewPage({ slug, onBackToDashboard }: PublicReviewPagePr
   useEffect(() => {
     let isMounted = true;
     setLoading(true);
+    const startTime = Date.now();
+    const MINIMUM_LOAD_MS = 1800; // 1.8 seconds authentic Google loading experience
+
     api.getPublicBusiness(slug)
       .then((data) => {
         if (!isMounted) return;
@@ -217,13 +221,44 @@ export function PublicReviewPage({ slug, onBackToDashboard }: PublicReviewPagePr
         if (isMounted) setError('Unable to load business details. Please try again.');
       })
       .finally(() => {
-        if (isMounted) setLoading(false);
+        const elapsed = Date.now() - startTime;
+        const remaining = Math.max(0, MINIMUM_LOAD_MS - elapsed);
+        setTimeout(() => {
+          if (isMounted) setLoading(false);
+        }, remaining);
       });
 
     return () => {
       isMounted = false;
     };
   }, [slug]);
+
+  // Dynamic SEO & Structured Data for Google search crawlers
+  useEffect(() => {
+    if (business && !business.isSuspended) {
+      updatePageSeo({
+        title: `Review ${business.businessName} on Google Maps`,
+        description: `Share your review for ${business.businessName}. Rate ${business.category || 'local services'}, pick your highlights, and copy organic AI review drafts.`,
+        canonicalUrl: typeof window !== 'undefined' ? window.location.href : undefined,
+        ogType: 'website',
+        ogImage: business.businessLogo || '/google-qr-logo.png',
+        structuredData: {
+          '@context': 'https://schema.org',
+          '@type': 'LocalBusiness',
+          name: business.businessName,
+          image: business.businessLogo || undefined,
+          url: business.googleReviewUrl,
+          description: business.productsAndServices || `Review ${business.businessName} on Google Maps`,
+          aggregateRating: {
+            '@type': 'AggregateRating',
+            ratingValue: '5.0',
+            bestRating: '5.0',
+            ratingCount: '1',
+          },
+        },
+      });
+    }
+  }, [business]);
 
   const handleRatingChange = (newRating: number) => {
     setStarRating(newRating);
@@ -322,12 +357,7 @@ export function PublicReviewPage({ slug, onBackToDashboard }: PublicReviewPagePr
   };
 
   if (loading) {
-    return (
-      <LoadingScreen
-        message="Connecting to Google Business Profile..."
-        subMessage="Fetching verified business profile & Google Maps review gateway"
-      />
-    );
+    return <GoogleReviewLoadingScreen />;
   }
 
   if (error || !business) {

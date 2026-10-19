@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="gmbGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a73e8" />
+      <stop offset="50%" stop-color="#4285f4" />
+      <stop offset="100%" stop-color="#0d47a1" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000" flood-opacity="0.15" />
+    </filter>
+  </defs>
+  <!-- Rounded Base Icon -->
+  <rect x="4" y="4" width="56" height="56" rx="14" fill="url(#gmbGrad)" filter="url(#shadow)" />
+  <!-- Inner White Shield / Review Card -->
+  <rect x="10" y="10" width="44" height="44" rx="10" fill="#ffffff" fill-opacity="0.95" />
+  <!-- 5-Star Center Glyph in Google Amber -->
+  <path d="M32 17L35.8 25.5L45 26.6L38.2 32.8L40.1 41.9L32 37.3L23.9 41.9L25.8 32.8L19 26.6L28.2 25.5L32 17Z" fill="#f9ab00" stroke="#ea8600" stroke-width="1" stroke-linejoin="round" />
+  <!-- Mini Google Maps Location Dot -->
+  <circle cx="32" cy="48" r="3.5" fill="#1a73e8" />
+  <circle cx="23" cy="48" r="2.5" fill="#34a853" />
+  <circle cx="41" cy="48" r="2.5" fill="#ea4335" />
+</svg>

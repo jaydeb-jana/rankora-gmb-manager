@@ -66,7 +66,7 @@ export function SuspendedAccountNotice({
                 Google Business Profile
               </span>
               <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#fce8e6] text-[#d93025] border border-[#fad2cf]">
-                POLICY NOTICE
+                POLICY ENFORCEMENT
               </span>
             </div>
             <div className="text-[11px] font-medium text-[#5f6368]">
@@ -76,11 +76,12 @@ export function SuspendedAccountNotice({
         </div>
 
         <button
+          type="button"
           onClick={onLogout}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#5f6368] hover:text-[#202124] bg-white border border-[#dadce0] rounded-lg hover:bg-[#f1f3f4] transition-colors"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#5f6368] hover:text-[#d93025] bg-white border border-[#dadce0] rounded-lg hover:bg-[#fce8e6]/50 transition-colors cursor-pointer"
         >
           <LogOut className="w-3.5 h-3.5" />
-          <span>লগআউট (Sign Out)</span>
+          <span>Sign Out</span>
         </button>
       </header>
 
@@ -95,10 +96,10 @@ export function SuspendedAccountNotice({
               </div>
               <div>
                 <h1 className="text-lg sm:text-xl font-bold tracking-tight">
-                  অফিসিয়াল Google নোটিশ: আপনার সাইট ও পরিষেবা স্থগিত করা হয়েছে
+                  Official Google Notice: Your Site Access and Services Have Been Suspended
                 </h1>
                 <p className="text-xs text-red-100 font-medium">
-                  Official Notice: Your site access and services have been suspended by Google Compliance
+                  Enforced by Google Business Profile Trust &amp; Safety Compliance Team
                 </p>
               </div>
             </div>
@@ -109,19 +110,19 @@ export function SuspendedAccountNotice({
           </div>
 
           <div className="p-6 sm:p-8 space-y-6">
-            {/* Primary Violation Description in Bengali */}
+            {/* Primary Violation Description in English */}
             <div className="bg-[#fce8e6] border border-[#fad2cf] rounded-xl p-5 space-y-3">
               <div className="flex items-start gap-3">
                 <AlertTriangle className="w-6 h-6 text-[#d93025] shrink-0 mt-0.5" />
                 <div className="space-y-2">
                   <h2 className="text-base font-bold text-[#b31412]">
-                    আইনি ও পলিসি নির্দেশিকা লঙ্ঘনের কারণে অ্যাকাউন্ট বন্ধ
+                    Account Suspended Due to Policy &amp; Legal Framework Violations
                   </h2>
                   <p className="text-sm text-[#3c4043] leading-relaxed">
-                    গুগল এর কর্মচারী ও নীতি পর্যালোচনা (Trust &amp; Safety Compliance) টিম দ্বারা নিরীক্ষার পর জানানো যাচ্ছে যে—আপনার সাইট বা অ্যাকাউন্টে <strong>আইনি নির্দেশিকা অথবা Google পলিসি নীতিমালার সরাসরি লঙ্ঘন</strong> পাওয়া গেছে। ফলে অফিসিয়াল Google সিস্টেম থেকে আপনার সাইট ও পর্যালোচনা লিংক সম্পূর্ণভাবে বন্ধ বা স্থগিত (Suspended) করা হয়েছে।
+                    Following an internal review by the <strong>Google Trust &amp; Safety Compliance Team</strong>, this site and associated business profile have been found in direct violation of legal frameworks or Google Business Profile engagement policies. Consequently, all public review landing pages, custom QR stand redirections, and automated AI reply systems have been deactivated across the Google network.
                   </p>
                   <p className="text-xs text-[#5f6368] leading-relaxed italic">
-                    "This site has been suspended by official Google staff due to a direct violation of legal frameworks or Google Business Profile content and engagement guidelines."
+                    &ldquo;This site has been suspended by official Google staff due to a direct violation of legal frameworks or Google Business Profile content and engagement guidelines.&rdquo;
                   </p>
                 </div>
               </div>
@@ -132,7 +133,7 @@ export function SuspendedAccountNotice({
               <div className="p-4 rounded-xl bg-[#f8f9fa] border border-[#dadce0] space-y-2">
                 <div className="flex items-center gap-2 text-xs font-semibold text-[#5f6368]">
                   <FileText className="w-4 h-4 text-[#1a73e8]" />
-                  <span>অ্যাকাউন্ট ও ব্যবসা তথ্য (Account Details)</span>
+                  <span>Account &amp; Business Information</span>
                 </div>
                 <div className="text-sm font-bold text-[#202124]">
                   {businessName || user.fullName || 'Business Owner'}
@@ -141,23 +142,23 @@ export function SuspendedAccountNotice({
                   {user.email}
                 </div>
                 <div className="text-[11px] text-[#70757a]">
-                  আইডি: <span className="font-mono">{user.id}</span>
+                  Account ID: <span className="font-mono">{user.id}</span>
                 </div>
               </div>
 
               <div className="p-4 rounded-xl bg-[#f8f9fa] border border-[#dadce0] space-y-2">
                 <div className="flex items-center gap-2 text-xs font-semibold text-[#5f6368]">
                   <Clock className="w-4 h-4 text-[#d93025]" />
-                  <span>স্থগিতকরণের স্ট্যাটাস (Status)</span>
+                  <span>Enforcement Status</span>
                 </div>
                 <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#fce8e6] text-[#d93025] text-xs font-bold">
-                  <span>স্থগিত / আইনি পর্যালোচনাধীন (Under Review)</span>
+                  <span>Suspended / Under Regulatory Review</span>
                 </div>
                 <div className="text-xs text-[#5f6368]">
-                  পর্যালোচক: <strong>Official Google Policy Compliance Team</strong>
+                  Enforcement Body: <strong>Official Google Policy Compliance Team</strong>
                 </div>
                 <div className="text-[11px] text-[#70757a]">
-                  সংশ্লিষ্ট ফিচার: QR স্ট্যান্ড, রিভিউ সংগ্রহ ও অটোমেটিক এআই রিপ্লাই বন্ধ
+                  Impacted Features: QR Stands, Review Collection, and AI Auto-Replies Disabled
                 </div>
               </div>
             </div>
@@ -167,13 +168,13 @@ export function SuspendedAccountNotice({
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#ceead6]">
                 <div>
                   <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#1e8e3e] text-white text-xs font-bold tracking-wide mb-2 shadow-2xs">
-                    <span>কন্টাক্ট টু পার্টনার (CONTACT TO PARTNER)</span>
+                    <span>CONTACT TO PARTNER</span>
                   </div>
                   <h3 className="text-lg sm:text-xl font-extrabold text-[#137333]">
-                    সহায়তা ও আপিল করতে পার্টনারের সাথে যোগাযোগ করুন
+                    Contact Authorized Partner for Assistance &amp; Appeal
                   </h3>
                   <p className="text-xs sm:text-sm text-[#3c4043] mt-1">
-                    অ্যাকাউন্ট পুনরুদ্ধার বা আইনি জটিলতা সমাধানের জন্য অনুমোদিত অফিসিয়াল পার্টনারের সাথে সরাসরি হোয়াটসঅ্যাপে কথা বলুন।
+                    To resolve compliance violations or request account reinstatement, please get in touch directly with our authorized regional partner via WhatsApp.
                   </p>
                 </div>
 
@@ -193,10 +194,10 @@ export function SuspendedAccountNotice({
                   href={waUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-3 px-5 py-4 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-white font-bold text-sm sm:text-base shadow-md hover:shadow-lg transition-all transform active:scale-95"
+                  className="flex items-center justify-center gap-3 px-5 py-4 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-white font-bold text-sm sm:text-base shadow-md hover:shadow-lg transition-all transform active:scale-95 cursor-pointer"
                 >
                   <MessageCircle className="w-5 h-5 fill-white" />
-                  <span>WhatsApp-এ পার্টনারকে মেসেজ করুন</span>
+                  <span>Message Partner on WhatsApp</span>
                   <ExternalLink className="w-4 h-4" />
                 </a>
 
@@ -207,7 +208,7 @@ export function SuspendedAccountNotice({
                     </div>
                     <div>
                       <div className="text-[11px] font-medium text-[#5f6368]">
-                        WhatsApp ও হেল্পলাইন নম্বর
+                        WhatsApp &amp; Helpline Number
                       </div>
                       <a
                         href={`tel:${partnerWhatsAppNumber}`}
@@ -219,9 +220,10 @@ export function SuspendedAccountNotice({
                   </div>
 
                   <button
+                    type="button"
                     onClick={handleCopyNumber}
-                    title="নম্বর কপি করুন"
-                    className="p-2 rounded-lg bg-[#f1f3f4] hover:bg-[#e8eaed] text-[#3c4043] transition-colors"
+                    title="Copy Phone Number"
+                    className="p-2 rounded-lg bg-[#f1f3f4] hover:bg-[#e8eaed] text-[#3c4043] transition-colors cursor-pointer"
                   >
                     {copiedNumber ? (
                       <Check className="w-4 h-4 text-[#1e8e3e]" />
@@ -236,7 +238,7 @@ export function SuspendedAccountNotice({
               <div className="mt-4 pt-4 border-t border-[#ceead6] flex items-center justify-between flex-wrap gap-2 text-xs text-[#5f6368]">
                 <div className="flex items-center gap-1.5">
                   <Mail className="w-3.5 h-3.5 text-[#1e8e3e]" />
-                  <span>অফিসিয়াল পার্টনার ইমেইল:</span>
+                  <span>Official Partner Email:</span>
                   <a
                     href={`mailto:${partnerEmail}`}
                     className="font-medium text-[#1a73e8] hover:underline"
@@ -245,7 +247,7 @@ export function SuspendedAccountNotice({
                   </a>
                 </div>
                 <div>
-                  সাপোর্ট টাইম: সোম-শনি (সকাল ১০টা - সন্ধ্যা ৮টা)
+                  Support Hours: Mon – Sat (10:00 AM – 8:00 PM IST)
                 </div>
               </div>
             </div>
