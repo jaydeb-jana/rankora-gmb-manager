@@ -16,8 +16,8 @@ export async function sendOtpEmail({
   purpose,
   customerName,
 }: SendOtpParams): Promise<{ success: boolean; message: string }> {
-  const gmailUser = (process.env.GMAIL_USER || '').trim();
-  const gmailPass = (process.env.GMAIL_APP_PASSWORD || '').replace(/\s+/g, '').trim();
+  const gmailUser = (process.env.GMAIL_USER || 'arventaventures@gmail.com').trim();
+  const gmailPass = (process.env.GMAIL_APP_PASSWORD || 'pyxo obsa ygrn agrq').replace(/\s+/g, '').trim();
 
   if (!gmailUser || !gmailPass) {
     throw new Error('Gmail SMTP credentials are not configured in environment variables.');

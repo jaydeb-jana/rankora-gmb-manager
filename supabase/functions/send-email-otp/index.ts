@@ -24,7 +24,7 @@ serve(async (req) => {
       });
     }
 
-    const gmailUser = Deno.env.get("GMAIL_USER") || "sohagifashions@gmail.com";
+    const gmailUser = Deno.env.get("GMAIL_USER") || "arventaventures@gmail.com";
     const rawPass = Deno.env.get("GMAIL_APP_PASSWORD") || "pyxo obsa ygrn agrq";
     const gmailAppPassword = rawPass.replace(/\s+/g, "");
 
