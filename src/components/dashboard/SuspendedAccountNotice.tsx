@@ -12,8 +12,10 @@ import {
   Lock,
   FileText,
   Clock,
+  RefreshCw,
 } from 'lucide-react';
 import { CustomerUser } from '../../types';
+import { useAuth } from '../../context/AuthContext';
 
 interface SuspendedAccountNoticeProps {
   user: CustomerUser;
@@ -26,7 +28,10 @@ export function SuspendedAccountNotice({
   businessName,
   onLogout,
 }: SuspendedAccountNoticeProps) {
+  const { refreshUser } = useAuth();
   const [copiedNumber, setCopiedNumber] = useState<boolean>(false);
+  const [isChecking, setIsChecking] = useState<boolean>(false);
+  const [checkNotice, setCheckNotice] = useState<string | null>(null);
 
   const partnerWhatsAppNumber = '+91 7872490719';
   const partnerRawNumber = '917872490719';
@@ -41,6 +46,20 @@ export function SuspendedAccountNotice({
     navigator.clipboard.writeText(partnerWhatsAppNumber);
     setCopiedNumber(true);
     setTimeout(() => setCopiedNumber(false), 2500);
+  };
+
+  const handleCheckStatus = async () => {
+    setIsChecking(true);
+    setCheckNotice(null);
+    try {
+      await refreshUser();
+      setCheckNotice('Status refreshed.');
+    } catch {
+      setCheckNotice('Unable to refresh status. Please try again.');
+    } finally {
+      setIsChecking(false);
+      setTimeout(() => setCheckNotice(null), 3500);
+    }
   };
 
   return (
@@ -75,14 +94,27 @@ export function SuspendedAccountNotice({
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={onLogout}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#5f6368] hover:text-[#d93025] bg-white border border-[#dadce0] rounded-lg hover:bg-[#fce8e6]/50 transition-colors cursor-pointer"
-        >
-          <LogOut className="w-3.5 h-3.5" />
-          <span>Sign Out</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleCheckStatus}
+            disabled={isChecking}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#1a73e8] hover:text-[#174ea6] bg-white border border-[#dadce0] rounded-lg hover:bg-blue-50/60 transition-colors cursor-pointer disabled:opacity-50"
+            title="Check if account has been unsuspended"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isChecking ? 'animate-spin text-[#1a73e8]' : ''}`} />
+            <span>{isChecking ? 'Checking...' : 'Check Status'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={onLogout}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#5f6368] hover:text-[#d93025] bg-white border border-[#dadce0] rounded-lg hover:bg-[#fce8e6]/50 transition-colors cursor-pointer"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Sign Out</span>
+          </button>
+        </div>
       </header>
 
       {/* Main Alert Container */}
@@ -159,6 +191,22 @@ export function SuspendedAccountNotice({
                 </div>
                 <div className="text-[11px] text-[#70757a]">
                   Impacted Features: QR Stands, Review Collection, and AI Auto-Replies Disabled
+                </div>
+                <div className="pt-1 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleCheckStatus}
+                    disabled={isChecking}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-[#dadce0] hover:bg-gray-50 text-xs font-semibold text-[#1a73e8] transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isChecking ? 'animate-spin' : ''}`} />
+                    <span>{isChecking ? 'Checking System...' : 'Verify Reinstatement'}</span>
+                  </button>
+                  {checkNotice && (
+                    <span className="text-[11px] font-medium text-[#5f6368]">
+                      {checkNotice}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>

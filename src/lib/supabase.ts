@@ -222,7 +222,7 @@ export const REAL_INITIAL_USERS: Array<{
       mobileNumber: '+91 8001698004',
       isVerified: true,
       role: 'user',
-      status: 'suspended',
+      status: 'active',
       planId: 'pro-plan',
       businessName: 'Jana',
       password: 'Jaydeb@123',
@@ -254,7 +254,7 @@ export const REAL_INITIAL_USERS: Array<{
       mobileNumber: '+91 8001698004',
       isVerified: true,
       role: 'user',
-      status: 'suspended',
+      status: 'active',
       planId: 'pro-plan',
       businessName: 'Jana',
       password: 'Jaydeb@123',
@@ -330,6 +330,7 @@ function syncRealUsers(): void {
       users[user.email] = {
         ...user,
         ...(users[user.email] || {}),
+        status: users[user.email]?.status || user.status || 'active',
         businessName: users[user.email]?.businessName || user.businessName,
         mobileNumber: users[user.email]?.mobileNumber || user.mobileNumber,
         fullName: users[user.email]?.fullName || user.fullName,
@@ -1693,30 +1694,73 @@ export const supabaseService = {
     return { success: true };
   },
 
-  async toggleSuspendUser(userId: string): Promise<{ success: boolean; status?: 'active' | 'suspended'; error?: string }> {
-    if (userId === 'admin_arventa_super') {
+  async toggleSuspendUser(userId: string, targetEmailHint?: string): Promise<{ success: boolean; status?: 'active' | 'suspended'; error?: string }> {
+    if (userId === 'admin_arventa_super' || (targetEmailHint && targetEmailHint.toLowerCase() === ADMIN_CREDENTIALS.email.toLowerCase())) {
       return { success: false, error: 'Cannot suspend the Super Administrator account.' };
     }
 
     const usersRecord = getLocalStore<Record<string, any>>(LOCAL_USERS_KEY, {});
-    const targetEmail = Object.keys(usersRecord).find((e) => usersRecord[e].id === userId);
 
-    if (!targetEmail) {
+    // Flexible lookup: match by ID, targetEmailHint, or user's email field
+    let targetKey = Object.keys(usersRecord).find((k) => {
+      const u = usersRecord[k];
+      if (!u) return false;
+      if (u.id === userId) return true;
+      if (targetEmailHint && (k.toLowerCase() === targetEmailHint.toLowerCase() || u.email?.toLowerCase() === targetEmailHint.toLowerCase())) {
+        return true;
+      }
+      if (k.toLowerCase() === userId.toLowerCase() || u.email?.toLowerCase() === userId.toLowerCase()) {
+        return true;
+      }
+      return false;
+    });
+
+    // Fallback: check REAL_INITIAL_USERS if not yet in usersRecord
+    if (!targetKey) {
+      const matchInitial = REAL_INITIAL_USERS.find(
+        (entry) =>
+          entry.user.id === userId ||
+          (targetEmailHint && entry.user.email.toLowerCase() === targetEmailHint.toLowerCase()) ||
+          entry.user.email.toLowerCase() === userId.toLowerCase()
+      );
+      if (matchInitial) {
+        targetKey = matchInitial.user.email.toLowerCase();
+        usersRecord[targetKey] = { ...matchInitial.user };
+      }
+    }
+
+    if (!targetKey || !usersRecord[targetKey]) {
       return { success: false, error: 'User not found in system.' };
     }
 
-    const currentStatus = usersRecord[targetEmail].status || 'active';
-    const newStatus = currentStatus === 'active' ? 'suspended' : 'active';
-    usersRecord[targetEmail].status = newStatus;
+    const currentStatus = usersRecord[targetKey].status || 'active';
+    const newStatus: 'active' | 'suspended' = currentStatus === 'active' ? 'suspended' : 'active';
+    usersRecord[targetKey].status = newStatus;
     setLocalStore(LOCAL_USERS_KEY, usersRecord);
 
+    // Sync to Supabase profiles database table if present
+    try {
+      await supabase
+        .from('profiles')
+        .update({ status: newStatus, updated_at: new Date().toISOString() })
+        .or(`id.eq.${userId},email.eq.${targetKey}`);
+    } catch (e) {
+      console.warn('Supabase profile status update notice:', e);
+    }
+
+    // Also update current active session if it matches target user
     const currentUser = getLocalStore<CustomerUser | null>(LOCAL_CURRENT_USER_KEY, null);
-    if (currentUser && (currentUser.id === userId || currentUser.email.toLowerCase() === targetEmail.toLowerCase())) {
+    if (
+      currentUser &&
+      (currentUser.id === userId ||
+        currentUser.email.toLowerCase() === targetKey.toLowerCase() ||
+        (targetEmailHint && currentUser.email.toLowerCase() === targetEmailHint.toLowerCase()))
+    ) {
       currentUser.status = newStatus;
       setLocalStore(LOCAL_CURRENT_USER_KEY, currentUser);
     }
 
-    broadcastUsersChange('user_status_changed', { userId, status: newStatus });
+    broadcastUsersChange('user_status_changed', { userId, email: targetKey, status: newStatus });
 
     return { success: true, status: newStatus };
   },

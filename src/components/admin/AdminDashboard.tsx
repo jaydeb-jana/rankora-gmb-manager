@@ -225,11 +225,11 @@ export function AdminDashboard({ onUserImpersonated }: AdminDashboardProps = {})
       showError('Super Administrator account cannot be suspended.');
       return;
     }
-    const res = await api.toggleSuspendUser(targetUser.id);
+    const res = await api.toggleSuspendUser(targetUser.id, targetUser.email);
     if (res.success && res.status) {
       showSuccess(`User ${targetUser.fullName} is now ${res.status}.`);
       setUsers((prev) =>
-        prev.map((u) => (u.id === targetUser.id ? { ...u, status: res.status } : u))
+        prev.map((u) => (u.id === targetUser.id || u.email.toLowerCase() === targetUser.email.toLowerCase() ? { ...u, status: res.status } : u))
       );
     } else {
       showError(res.error || 'Failed to update user status.');

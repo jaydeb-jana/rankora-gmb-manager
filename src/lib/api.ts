@@ -358,8 +358,8 @@ export const api = {
     return supabaseService.deleteUser(userId);
   },
 
-  async toggleSuspendUser(userId: string): Promise<{ success: boolean; status?: 'active' | 'suspended'; error?: string }> {
-    return supabaseService.toggleSuspendUser(userId);
+  async toggleSuspendUser(userId: string, email?: string): Promise<{ success: boolean; status?: 'active' | 'suspended'; error?: string }> {
+    return supabaseService.toggleSuspendUser(userId, email);
   },
 
   async createUser(data: {

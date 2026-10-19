@@ -89,10 +89,66 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
+    // Realtime cross-tab and cross-window sync listener for user status changes
+    const handleSync = () => {
+      refreshUser();
+    };
+
+    window.addEventListener('rankora_users_updated', handleSync);
+
+    let bc: BroadcastChannel | null = null;
+    if (typeof BroadcastChannel !== 'undefined') {
+      try {
+        bc = new BroadcastChannel('rankora_realtime_sync');
+        bc.onmessage = (event) => {
+          if (
+            event.data?.eventType === 'user_status_changed' ||
+            event.data?.type === 'user_status_changed' ||
+            event.data?.eventType === 'user_updated'
+          ) {
+            refreshUser();
+          }
+        };
+      } catch {}
+    }
+
+    const handleStorage = (e: StorageEvent) => {
+      if (
+        e.key === 'rankora_current_user' ||
+        e.key === 'rankora_supabase_users' ||
+        e.key === 'rankora_token'
+      ) {
+        refreshUser();
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    window.addEventListener('focus', handleSync);
+
     return () => {
       subscription.unsubscribe();
+      window.removeEventListener('rankora_users_updated', handleSync);
+      if (bc) bc.close();
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('focus', handleSync);
     };
   }, []);
+
+  // When user is currently suspended, periodically re-check status every 3 seconds
+  // so if admin unsuspends them, their portal unlocks immediately without manual refresh
+  useEffect(() => {
+    if (!user || user.status !== 'suspended') return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await api.getMe();
+        if (res.user && res.user.status !== 'suspended') {
+          setUser(res.user);
+        }
+      } catch {}
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [user?.status]);
 
   const login = (newToken: string, newUser: CustomerUser) => {
     localStorage.setItem('rankora_token', newToken);
