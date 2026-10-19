@@ -369,6 +369,7 @@ export function AdminDashboard({ onUserImpersonated }: AdminDashboardProps = {})
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-16">
+      {(loadingUsers || loadingPlans || isRefreshing) && <TopProgressBar />}
       {/* 1. Super Admin Top Banner */}
       <div className="bg-gradient-to-r from-[#1a73e8] via-[#174ea6] to-[#0d3c61] rounded-2xl p-6 sm:p-8 text-white shadow-md relative overflow-hidden">
         <div className="absolute right-0 top-0 bottom-0 w-1/3 opacity-10 pointer-events-none flex items-center justify-end pr-8">
@@ -613,7 +614,33 @@ export function AdminDashboard({ onUserImpersonated }: AdminDashboardProps = {})
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#dadce0]">
-                    {filteredUsers.length === 0 ? (
+                    {loadingUsers ? (
+                      Array.from({ length: 4 }).map((_, idx) => (
+                        <tr key={idx} className="animate-pulse">
+                          <td className="py-4 px-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-9 h-9 rounded-full bg-gray-200" />
+                              <div className="space-y-1.5 flex-1">
+                                <div className="h-3.5 bg-gray-200 rounded w-32" />
+                                <div className="h-2.5 bg-gray-100 rounded w-44" />
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-4 px-4">
+                            <div className="h-3.5 bg-gray-200 rounded w-28" />
+                          </td>
+                          <td className="py-4 px-4">
+                            <div className="h-4 bg-gray-100 rounded w-20" />
+                          </td>
+                          <td className="py-4 px-4">
+                            <div className="h-5 bg-gray-200 rounded-full w-16" />
+                          </td>
+                          <td className="py-4 px-4 text-right">
+                            <div className="h-8 bg-gray-100 rounded-lg w-20 ml-auto" />
+                          </td>
+                        </tr>
+                      ))
+                    ) : filteredUsers.length === 0 ? (
                       <tr>
                         <td colSpan={5} className="py-12 text-center text-[#5f6368]">
                           <div className="max-w-sm mx-auto space-y-2">
