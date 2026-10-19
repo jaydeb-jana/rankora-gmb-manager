@@ -18,6 +18,8 @@ import {
   MessageCircle,
   Link as LinkIcon,
   Star,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { LoadingScreen, GoogleReviewLoadingScreen } from '../common/LoadingScreen';
@@ -102,40 +104,40 @@ const RATING_EMOJIS = [
 ];
 
 const POSITIVE_CHIPS = [
-  '🌟 Friendly & Welcoming Staff',
-  '⚡ Quick & Prompt Service',
-  '💎 Exceptional Quality',
-  '🧼 Clean & Hygienic Space',
-  '💰 Great Value for Money',
-  '🤝 Helpful & Honest Guidance',
-  '🏆 Exceeded Expectations',
+  '🌟 Friendly Staff',
+  '⚡ Fast Service',
+  '💎 Top Quality',
+  '🧼 Clean & Hygienic',
+  '💰 Great Value',
+  '🤝 Honest Guidance',
+  '🏆 Exceeded Hopes',
   '🎯 Attention to Detail',
-  '🛋️ Wonderful Atmosphere',
-  '📦 Great Packaging & Care',
-  '💯 Authentic & Trustworthy',
-  '✨ Smooth & Easy Experience',
+  '🛋️ Great Ambiance',
+  '📦 Good Packaging',
+  '💯 Highly Reliable',
+  '✨ Smooth Experience',
 ];
 
 const NEUTRAL_CHIPS = [
   '⚖️ Average Service',
   '👌 Decent Quality',
-  '⏳ Moderate Wait Time',
+  '⏳ Moderate Wait',
   '💵 Fair Pricing',
-  '🔧 Needs Minor Improvement',
-  '😐 Standard Experience',
-  '📦 Acceptable Packaging',
-  '📞 Basic Customer Support',
+  '🔧 Minor Issues',
+  '😐 Standard Visit',
+  '📦 Okay Packaging',
+  '📞 Basic Support',
 ];
 
 const CRITICAL_CHIPS = [
-  '⚠️ Slow & Delayed Service',
+  '⚠️ Slow Service',
   '❌ Poor Communication',
-  '💸 High & Unclear Pricing',
-  '👎 Unhelpful Staff Behavior',
-  '🛠️ Quality Not as Expected',
-  '⏳ Long Waiting Time',
-  '📞 Lack of Support / Follow-up',
-  '🚨 Needs Major Improvement',
+  '💸 High Pricing',
+  '👎 Unhelpful Staff',
+  '🛠️ Low Quality',
+  '⏳ Long Wait Time',
+  '📞 No Follow-up',
+  '🚨 Needs Improvement',
 ];
 
 function getChipsForRating(rating: number): string[] {
@@ -180,9 +182,10 @@ export function PublicReviewPage({ slug, onBackToDashboard }: PublicReviewPagePr
 
   // 3. Highlight chips
   const [selectedChips, setSelectedChips] = useState<string[]>([
-    '🌟 Friendly & Welcoming Staff',
-    '💎 Exceptional Quality',
+    '🌟 Friendly Staff',
+    '💎 Top Quality',
   ]);
+  const [showAllChips, setShowAllChips] = useState<boolean>(false);
 
   // 4. Preferred Language
   const [selectedLanguage, setSelectedLanguage] = useState<string>('English');
@@ -196,6 +199,66 @@ export function PublicReviewPage({ slug, onBackToDashboard }: PublicReviewPagePr
   const [generatedDraft, setGeneratedDraft] = useState<string>('');
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [copied, setCopied] = useState<boolean>(false);
+  const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
+
+  // Preload and monitor browser speech voices
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.getVoices();
+      const onVoicesChanged = () => {
+        window.speechSynthesis.getVoices();
+      };
+      window.speechSynthesis.onvoiceschanged = onVoicesChanged;
+      return () => {
+        try {
+          window.speechSynthesis.onvoiceschanged = null;
+          window.speechSynthesis.cancel();
+        } catch {}
+      };
+    }
+  }, []);
+
+  const speakBengaliVoiceGuidance = (customMsg?: string) => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    try {
+      window.speechSynthesis.cancel();
+
+      const message =
+        customMsg ||
+        'আপনার জন্য একটি সুন্দর রিভিউ স্বয়ংক্রিয়ভাবে তৈরি করে কপি করে দেওয়া হয়েছে। এবার গুগল ম্যাপসের রিভিউ বক্সে এটি পেস্ট করে পোস্ট করে দিন।';
+
+      const utterance = new SpeechSynthesisUtterance(message);
+      utterance.lang = 'bn-BD';
+      utterance.rate = 0.92;
+      utterance.pitch = 1.0;
+
+      const voices = window.speechSynthesis.getVoices();
+      const bnVoice = voices.find(
+        (v) => v.lang === 'bn-BD' || v.lang === 'bn-IN' || v.lang.startsWith('bn')
+      );
+      if (bnVoice) {
+        utterance.voice = bnVoice;
+      }
+
+      utterance.onstart = () => setIsSpeaking(true);
+      utterance.onend = () => setIsSpeaking(false);
+      utterance.onerror = () => setIsSpeaking(false);
+
+      window.speechSynthesis.speak(utterance);
+    } catch (e) {
+      console.warn('Voice guidance note:', e);
+      setIsSpeaking(false);
+    }
+  };
+
+  const stopVoiceGuidance = () => {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      try {
+        window.speechSynthesis.cancel();
+      } catch {}
+      setIsSpeaking(false);
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -264,6 +327,7 @@ export function PublicReviewPage({ slug, onBackToDashboard }: PublicReviewPagePr
     setStarRating(newRating);
     setGeneratedDraft('');
     setGenerationError(null);
+    setShowAllChips(false);
     const newChips = getChipsForRating(newRating);
     setSelectedChips([newChips[0], newChips[1]]);
   };
@@ -312,6 +376,28 @@ export function PublicReviewPage({ slug, onBackToDashboard }: PublicReviewPagePr
       if (res.success && res.draft) {
         setGeneratedDraft(res.draft);
         setGenerationError(null);
+
+        // 1. Auto-copy draft text to customer's clipboard immediately
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(res.draft);
+          } else {
+            const textarea = document.createElement('textarea');
+            textarea.value = res.draft;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+          }
+          setCopied(true);
+        } catch {
+          setCopied(true);
+        }
+
+        // 2. Play browser built-in AI voice guidance in Bengali
+        speakBengaliVoiceGuidance(
+          'আপনার জন্য একটি সুন্দর রিভিউ স্বয়ংক্রিয়ভাবে তৈরি করে কপি করে দেওয়া হয়েছে। এবার গুগল ম্যাপসের রিভিউ বক্সে এটি পেস্ট করে পোস্ট করে দিন।'
+        );
       } else {
         setGeneratedDraft('');
         setGenerationError(
@@ -341,6 +427,11 @@ export function PublicReviewPage({ slug, onBackToDashboard }: PublicReviewPagePr
         document.body.removeChild(textarea);
       }
       setCopied(true);
+
+      // Voice guidance confirmation
+      speakBengaliVoiceGuidance(
+        'রিভিউটি কপি করা হয়েছে। গুগল ম্যাপসের রিভিউ সেকশনে পেস্ট করুন।'
+      );
     } catch {
       setCopied(true);
     }
@@ -523,7 +614,7 @@ export function PublicReviewPage({ slug, onBackToDashboard }: PublicReviewPagePr
     : (business.productsAndServices ? business.productsAndServices.split(',').map((s) => s.trim()).filter(Boolean) : []);
 
   return (
-    <div className="min-h-screen bg-[#f8f9fa] py-6 px-4 sm:px-6 flex flex-col justify-between selection:bg-[#e8f0fe] selection:text-[#1a73e8]">
+    <div className="min-h-screen bg-[#f8f9fa] py-3 px-2.5 sm:py-6 sm:px-6 flex flex-col justify-between selection:bg-[#e8f0fe] selection:text-[#1a73e8]">
       {onBackToDashboard && (
         <div className="max-w-md mx-auto w-full mb-3 flex items-center justify-between text-xs">
           <button
@@ -550,7 +641,7 @@ export function PublicReviewPage({ slug, onBackToDashboard }: PublicReviewPagePr
           <div className="bg-[#34A853]"></div>
         </div>
 
-        <div className="p-6 sm:p-7 space-y-6">
+        <div className="p-4 sm:p-7 space-y-5 sm:space-y-6">
           {/* Business Header with Google Verified Profile styling */}
           <div className="text-center space-y-2.5 pb-4 border-b border-[#f1f3f4]">
             {business.businessLogo ? (
@@ -648,7 +739,7 @@ export function PublicReviewPage({ slug, onBackToDashboard }: PublicReviewPagePr
             </div>
 
             {/* 5-Column Clean Layout - Emojis have ample space, labels are clean underneath */}
-            <div className="grid grid-cols-5 gap-2 sm:gap-3 pt-1">
+            <div className="grid grid-cols-5 gap-1.5 sm:gap-3 pt-1">
               {RATING_EMOJIS.map((item) => {
                 const isSelected = item.rating === starRating;
                 return (
@@ -656,22 +747,22 @@ export function PublicReviewPage({ slug, onBackToDashboard }: PublicReviewPagePr
                     type="button"
                     key={item.rating}
                     onClick={() => handleRatingChange(item.rating)}
-                    className="flex flex-col items-center gap-1.5 focus:outline-none group cursor-pointer transition-transform active:scale-95"
+                    className="flex flex-col items-center gap-1 focus:outline-none group cursor-pointer transition-transform active:scale-95"
                     aria-label={`${item.rating} star - ${item.label}`}
                   >
                     <div
-                      className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center transition-all ${
+                      className={`w-11 h-11 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center transition-all ${
                         isSelected
                           ? `${item.bg} border-2 ${item.border} shadow-sm ring-2 ${item.ring} scale-105`
                           : 'bg-white border border-[#dadce0] hover:bg-[#f8f9fa] hover:border-[#bdc1c6] opacity-80 hover:opacity-100'
                       }`}
                     >
-                      <span className="text-2xl sm:text-3xl leading-none select-none">
+                      <span className="text-xl sm:text-3xl leading-none select-none">
                         {item.emoji}
                       </span>
                     </div>
                     <span
-                      className={`text-[11px] sm:text-xs text-center leading-tight transition-colors ${
+                      className={`text-[10px] sm:text-xs text-center leading-tight transition-colors ${
                         isSelected
                           ? `${item.color} font-bold`
                           : 'text-[#5f6368] font-medium group-hover:text-[#202124]'
@@ -686,9 +777,9 @@ export function PublicReviewPage({ slug, onBackToDashboard }: PublicReviewPagePr
 
             {/* Google Rating Status Indicator Badge */}
             <div
-              className={`py-2 px-3.5 rounded-xl border flex items-center justify-between text-xs transition-all ${currentEmojiInfo.bg} ${currentEmojiInfo.border}`}
+              className={`py-2 px-3 sm:px-3.5 rounded-xl border flex flex-wrap items-center justify-between gap-1.5 text-xs transition-all ${currentEmojiInfo.bg} ${currentEmojiInfo.border}`}
             >
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <span className="text-amber-500 font-bold tracking-wider text-xs select-none">
                   {currentEmojiInfo.stars}
                 </span>
@@ -696,7 +787,7 @@ export function PublicReviewPage({ slug, onBackToDashboard }: PublicReviewPagePr
                   {currentEmojiInfo.rating}.0 • {currentEmojiInfo.label}
                 </span>
               </div>
-              <span className={`text-[11px] font-medium ${currentEmojiInfo.color} truncate ml-2`}>
+              <span className={`text-[11px] font-medium ${currentEmojiInfo.color}`}>
                 "{currentEmojiInfo.phrase}"
               </span>
             </div>
@@ -707,9 +798,10 @@ export function PublicReviewPage({ slug, onBackToDashboard }: PublicReviewPagePr
             const isPos = starRating >= 4;
             const isNeu = starRating === 3;
             const activeChipsList = getChipsForRating(starRating);
+            const visibleChips = showAllChips ? activeChipsList : activeChipsList.slice(0, 6);
 
             return (
-              <div className="space-y-2.5 pt-1">
+              <div className="space-y-2 pt-1">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-[#202124] flex items-center gap-1.5 tracking-wide">
                     {isPos ? (
@@ -736,15 +828,16 @@ export function PublicReviewPage({ slug, onBackToDashboard }: PublicReviewPagePr
                   </span>
                 </div>
 
-                <div className="flex flex-wrap gap-2">
-                  {activeChipsList.map((chip) => {
+                {/* Mobile-optimized 2-column symmetric grid */}
+                <div className="grid grid-cols-2 gap-2">
+                  {visibleChips.map((chip) => {
                     const selected = selectedChips.includes(chip);
                     return (
                       <button
                         type="button"
                         key={chip}
                         onClick={() => toggleChip(chip)}
-                        className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-colors cursor-pointer border ${
+                        className={`px-2.5 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer border text-left flex items-center justify-between gap-1 ${
                           selected
                             ? isPos
                               ? 'bg-[#e8f0fe] border-[#1a73e8] text-[#1a73e8] ring-1 ring-[#1a73e8] shadow-2xs font-semibold'
@@ -754,11 +847,28 @@ export function PublicReviewPage({ slug, onBackToDashboard }: PublicReviewPagePr
                             : 'bg-white border-[#dadce0] text-[#3c4043] hover:bg-[#f8f9fa] hover:border-[#1a73e8]/40'
                         }`}
                       >
-                        {chip}
+                        <span className="truncate">{chip}</span>
+                        {selected && (
+                          <Check className="w-3.5 h-3.5 shrink-0 stroke-[2.5]" />
+                        )}
                       </button>
                     );
                   })}
                 </div>
+
+                {activeChipsList.length > 6 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllChips(!showAllChips)}
+                    className="w-full py-1.5 text-center text-xs text-[#1a73e8] hover:text-[#174ea6] font-semibold hover:bg-[#f1f3f4] rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1"
+                  >
+                    <span>
+                      {showAllChips
+                        ? 'Show fewer highlights'
+                        : `+ Show ${activeChipsList.length - 6} more highlights`}
+                    </span>
+                  </button>
+                )}
               </div>
             );
           })()}
@@ -893,18 +1003,52 @@ export function PublicReviewPage({ slug, onBackToDashboard }: PublicReviewPagePr
                       <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
                       <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
                     </svg>
-                    <span>Google Review Draft (Ready to Post)</span>
+                    <span>Google Review Draft (Auto-Copied)</span>
                   </span>
-                  <button
-                    type="button"
-                    onClick={handleGenerateDraft}
-                    disabled={generating}
-                    className="text-xs text-[#1a73e8] font-medium hover:underline flex items-center gap-1 cursor-pointer"
-                  >
-                    <RefreshCw className={`w-3 h-3 ${generating ? 'animate-spin' : ''}`} />
-                    <span>Regenerate</span>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => (isSpeaking ? stopVoiceGuidance() : speakBengaliVoiceGuidance())}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border ${
+                        isSpeaking
+                          ? 'bg-amber-100 text-amber-900 border-amber-300 animate-pulse'
+                          : 'bg-blue-50 text-[#1a73e8] hover:bg-blue-100 border-blue-200'
+                      }`}
+                      title={isSpeaking ? 'ভয়েস থামান' : 'ভয়েস নির্দেশ শুনুন'}
+                    >
+                      {isSpeaking ? (
+                        <>
+                          <VolumeX className="w-3.5 h-3.5 text-amber-700" />
+                          <span>থামান</span>
+                        </>
+                      ) : (
+                        <>
+                          <Volume2 className="w-3.5 h-3.5 text-[#1a73e8]" />
+                          <span>ভয়েস শুনুন</span>
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleGenerateDraft}
+                      disabled={generating}
+                      className="text-xs text-[#1a73e8] font-medium hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <RefreshCw className={`w-3 h-3 ${generating ? 'animate-spin' : ''}`} />
+                      <span>Regenerate</span>
+                    </button>
+                  </div>
                 </div>
+
+                {copied && (
+                  <div className="p-2.5 rounded-lg bg-[#e6f4ea] border border-[#ceead6] flex items-center justify-between text-xs text-[#137333] shadow-2xs">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-[#137333] shrink-0" />
+                      <span className="font-semibold">রিভিউটি কপি হয়ে গেছে! গুগল ম্যাপসে পেস্ট করুন।</span>
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex items-center gap-1 text-amber-500 py-0.5">
                   {[1, 2, 3, 4, 5].map((s) => (
