@@ -1,14 +1,13 @@
 import { GoogleGenAI } from '@google/genai';
 
 export const CANDIDATE_GEMINI_MODELS = [
-  'gemini-1.5-flash',
+  'gemini-2.5-flash',
   'gemini-2.0-flash',
   'gemini-2.0-flash-lite',
+  'gemini-1.5-flash',
   'gemini-1.5-flash-8b',
-  'gemini-flash-latest',
-  'gemini-2.0-flash-001',
-  'gemini-2.5-flash-preview',
-  'gemini-1.5-flash-latest',
+  'gemini-2.5-pro',
+  'gemini-1.5-pro',
 ];
 
 let cachedActiveModel: string | null = null;
@@ -26,31 +25,35 @@ export async function resolveBestModel(ai: GoogleGenAI): Promise<string> {
     const pager = await ai.models.list();
     const available: string[] = [];
 
+    const processItem = (m: any) => {
+      if (!m) return;
+      const actions = m.supportedActions || m.supportedGenerationMethods;
+      if (!actions || actions.includes('generateContent')) {
+        const cleanName = (m.name || '').replace(/^models\//, '');
+        if (cleanName) {
+          available.push(cleanName);
+        }
+      }
+    };
+
     if (Array.isArray((pager as any)?.page)) {
       for (const m of (pager as any).page) {
-        if (!m.supportedGenerationMethods || m.supportedGenerationMethods.includes('generateContent')) {
-          available.push(m.name ? m.name.replace(/^models\//, '') : '');
-        }
+        processItem(m);
       }
     } else if (pager && typeof (pager as any)[Symbol.asyncIterator] === 'function') {
       for await (const m of pager as any) {
-        if (!m.supportedGenerationMethods || m.supportedGenerationMethods.includes('generateContent')) {
-          available.push(m.name ? m.name.replace(/^models\//, '') : '');
-        }
+        processItem(m);
       }
     }
 
     const preferenceOrder = [
-      'gemini-1.5-flash',
+      'gemini-2.5-flash',
       'gemini-2.0-flash',
       'gemini-2.0-flash-lite',
+      'gemini-1.5-flash',
       'gemini-1.5-flash-8b',
-      'gemini-flash-latest',
-      'gemini-2.0-flash-001',
-      'gemini-2.5-flash-preview',
-      'gemini-1.5-flash-latest',
-      'gemini-1.5-pro',
       'gemini-2.5-pro',
+      'gemini-1.5-pro',
     ];
 
     for (const p of preferenceOrder) {
@@ -75,7 +78,7 @@ export async function resolveBestModel(ai: GoogleGenAI): Promise<string> {
   }
 
   // Safe universal low-cost model default
-  return 'gemini-2.0-flash';
+  return 'gemini-2.5-flash';
 }
 
 export function getAiClient(apiKeyOverride?: string): GoogleGenAI | null {
@@ -148,6 +151,7 @@ export async function testGeminiApiKey(apiKey: string): Promise<{ valid: boolean
       ...CANDIDATE_GEMINI_MODELS.filter((m) => m !== bestModel),
     ];
     let lastErr: any = null;
+    let anyQuotaOrDemandHit = false;
 
     for (const model of modelsToTry) {
       try {
@@ -173,23 +177,28 @@ export async function testGeminiApiKey(apiKey: string): Promise<{ valid: boolean
           return { valid: false, message: formatGeminiErrorMessage(err) };
         }
 
+        // Check if key is recognized but hit traffic overload or quota/rate limit
+        if (
+          msg.includes('high demand') ||
+          msg.includes('spikes in demand') ||
+          msg.includes('503') ||
+          msg.includes('unavailable') ||
+          msg.includes('overloaded') ||
+          msg.includes('quota') ||
+          msg.includes('resource_exhausted') ||
+          msg.includes('429')
+        ) {
+          anyQuotaOrDemandHit = true;
+        }
+
         // For temporary model overload, high demand, 503, 404, quota spike, try next model!
         continue;
       }
     }
 
-    // If Google returned high demand or temporary overload across models, the key is authentic!
-    const lastMsg = (lastErr?.message || '').toLowerCase();
-    if (
-      lastMsg.includes('high demand') ||
-      lastMsg.includes('spikes in demand') ||
-      lastMsg.includes('503') ||
-      lastMsg.includes('unavailable') ||
-      lastMsg.includes('overloaded') ||
-      lastMsg.includes('quota') ||
-      lastMsg.includes('resource_exhausted')
-    ) {
-      cachedActiveModel = 'gemini-1.5-flash';
+    // If Google returned high demand or temporary overload/quota across models, the key is authentic!
+    if (anyQuotaOrDemandHit) {
+      cachedActiveModel = 'gemini-2.5-flash';
       return {
         valid: true,
         message: 'API Key is authentic & verified! (Google is experiencing temporary peak traffic; automatic model fallback is active).',
@@ -204,9 +213,12 @@ export async function testGeminiApiKey(apiKey: string): Promise<{ valid: boolean
       msg.includes('spikes in demand') ||
       msg.includes('503') ||
       msg.includes('unavailable') ||
-      msg.includes('overloaded')
+      msg.includes('overloaded') ||
+      msg.includes('quota') ||
+      msg.includes('resource_exhausted') ||
+      msg.includes('429')
     ) {
-      cachedActiveModel = 'gemini-1.5-flash';
+      cachedActiveModel = 'gemini-2.5-flash';
       return {
         valid: true,
         message: 'API Key is authentic & verified! (Google is experiencing temporary peak traffic; automatic model fallback is active).',

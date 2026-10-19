@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Sparkles,
   Copy,
@@ -200,35 +200,33 @@ export function PublicReviewPage({ slug, onBackToDashboard }: PublicReviewPagePr
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [copied, setCopied] = useState<boolean>(false);
   const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
+  const activeAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Preload and monitor browser speech voices
-  useEffect(() => {
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.getVoices();
-      const onVoicesChanged = () => {
-        window.speechSynthesis.getVoices();
-      };
-      window.speechSynthesis.onvoiceschanged = onVoicesChanged;
-      return () => {
-        try {
-          window.speechSynthesis.onvoiceschanged = null;
-          window.speechSynthesis.cancel();
-        } catch {}
-      };
+  // Stop any active audio playback or speech
+  const stopVoiceGuidance = () => {
+    if (activeAudioRef.current) {
+      try {
+        activeAudioRef.current.pause();
+        activeAudioRef.current.currentTime = 0;
+      } catch {}
+      activeAudioRef.current = null;
     }
-  }, []);
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      try {
+        window.speechSynthesis.cancel();
+      } catch {}
+    }
+    setIsSpeaking(false);
+  };
 
-  const speakBengaliVoiceGuidance = (customMsg?: string) => {
+  // Fallback Web Speech Synthesis if network audio stream cannot be fetched
+  const playFallbackSpeech = (message: string) => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
     try {
       if (window.speechSynthesis.paused) {
         window.speechSynthesis.resume();
       }
       window.speechSynthesis.cancel();
-
-      const message =
-        customMsg ||
-        'স্বয়ংক্রিয়ভাবে আপনার জন্য একটি ভালো রিভিউ তৈরি করে কপি করে দেওয়া হচ্ছে। গুগল ম্যাপসের রিভিউ সেকশনে এটি পেস্ট করে দিন।';
 
       const utterance = new SpeechSynthesisUtterance(message);
       utterance.lang = 'bn-BD';
@@ -248,20 +246,64 @@ export function PublicReviewPage({ slug, onBackToDashboard }: PublicReviewPagePr
       utterance.onerror = () => setIsSpeaking(false);
 
       window.speechSynthesis.speak(utterance);
-    } catch (e) {
-      console.warn('Voice guidance note:', e);
+    } catch {
       setIsSpeaking(false);
     }
   };
 
-  const stopVoiceGuidance = () => {
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      try {
-        window.speechSynthesis.cancel();
-      } catch {}
-      setIsSpeaking(false);
+  // Universal Bengali Voice Engine (Google Human TTS Audio + Web Speech fallback)
+  const speakBengaliVoiceGuidance = (customMsg?: string) => {
+    stopVoiceGuidance();
+
+    const message =
+      customMsg ||
+      'স্বয়ংক্রিয়ভাবে আপনার জন্য একটি ভালো রিভিউ তৈরি করে কপি করে দেওয়া হচ্ছে। গুগল ম্যাপসের রিভিউ সেকশনে এটি পেস্ট করে দিন।';
+
+    try {
+      // 1. Google Translate Natural Bengali Human Voice Audio Stream
+      const encoded = encodeURIComponent(message);
+      const audioUrl = `https://translate.google.com/translate_tts?client=tw-ob&tl=bn&ie=UTF-8&q=${encoded}`;
+      const audio = new Audio(audioUrl);
+      activeAudioRef.current = audio;
+
+      audio.onplay = () => setIsSpeaking(true);
+      audio.onended = () => {
+        setIsSpeaking(false);
+        activeAudioRef.current = null;
+      };
+      audio.onerror = () => {
+        console.warn('Audio stream error, falling back to Web Speech API');
+        playFallbackSpeech(message);
+      };
+
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((err) => {
+          console.warn('Audio play rejected, falling back:', err);
+          playFallbackSpeech(message);
+        });
+      }
+    } catch {
+      playFallbackSpeech(message);
     }
   };
+
+  // Preload and monitor browser speech voices as fallback
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.getVoices();
+      const onVoicesChanged = () => {
+        window.speechSynthesis.getVoices();
+      };
+      window.speechSynthesis.onvoiceschanged = onVoicesChanged;
+    }
+    return () => {
+      stopVoiceGuidance();
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.onvoiceschanged = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
