@@ -36,7 +36,9 @@ function drawStar(
 async function loadImg(src: string): Promise<HTMLImageElement | null> {
   return new Promise((resolve) => {
     const img = new Image();
-    img.crossOrigin = 'anonymous';
+    if (!src.startsWith('data:')) {
+      img.crossOrigin = 'anonymous';
+    }
     img.onload = () => resolve(img);
     img.onerror = () => resolve(null);
     img.src = src;
@@ -74,10 +76,22 @@ function drawCircularLogo(
 
   if (logo) {
     ctx.save();
-    ctx.beginPath();
-    ctx.arc(cx, cy, size / 2 - 6, 0, Math.PI * 2);
-    ctx.clip();
-    ctx.drawImage(logo, cx - size / 2 + 6, cy - size / 2 + 6, size - 12, size - 12);
+    // Preserve aspect ratio so rectangular logos don't get squished or cropped
+    const pad = 12;
+    const maxDim = size - pad * 2;
+    let drawW = maxDim;
+    let drawH = maxDim;
+    if (logo.naturalWidth && logo.naturalHeight) {
+      const aspect = logo.naturalWidth / logo.naturalHeight;
+      if (aspect > 1) {
+        drawW = maxDim;
+        drawH = maxDim / aspect;
+      } else {
+        drawH = maxDim;
+        drawW = maxDim * aspect;
+      }
+    }
+    ctx.drawImage(logo, cx - drawW / 2, cy - drawH / 2, drawW, drawH);
     ctx.restore();
   } else {
     const initial = bizName ? bizName.trim().charAt(0).toUpperCase() : 'G';

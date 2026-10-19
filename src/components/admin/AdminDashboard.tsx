@@ -238,13 +238,28 @@ export function AdminDashboard({ onUserImpersonated }: AdminDashboardProps = {})
 
   const handleDeleteUser = async () => {
     if (!deletingUser) return;
-    const res = await api.deleteUser(deletingUser.id);
-    if (res.success) {
-      showSuccess(`User ${deletingUser.fullName} deleted permanently.`);
-      setUsers((prev) => prev.filter((u) => u.id !== deletingUser.id));
-      setDeletingUser(null);
-    } else {
-      showError(res.error || 'Failed to delete user.');
+    const userToDelete = deletingUser;
+    // 1. Immediately dismiss modal and optimistically wipe from UI (0ms instant response)
+    setDeletingUser(null);
+    setUsers((prev) =>
+      prev.filter(
+        (u) =>
+          u.id !== userToDelete.id &&
+          u.email.toLowerCase().trim() !== userToDelete.email.toLowerCase().trim()
+      )
+    );
+    showSuccess(`User ${userToDelete.fullName} (${userToDelete.email}) permanently deleted.`);
+
+    // 2. Perform deep database wipe in background
+    try {
+      const res = await api.deleteUser(userToDelete.id, userToDelete.email);
+      if (!res.success) {
+        showError(res.error || 'Failed to delete user from database.');
+        loadUsers(false);
+      }
+    } catch {
+      showError('Failed to delete user from database.');
+      loadUsers(false);
     }
   };
 

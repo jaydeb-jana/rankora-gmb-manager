@@ -75,13 +75,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (session?.user && (event === 'SIGNED_IN' || event === 'USER_UPDATED')) {
         const u = session.user;
+        let localUser: any = null;
+        try {
+          const raw = localStorage.getItem('rankora_supabase_users');
+          if (raw && u.email) {
+            const parsed = JSON.parse(raw);
+            localUser = parsed[u.email.toLowerCase()];
+          }
+        } catch {}
+
         const appUser: CustomerUser = {
           id: u.id,
           email: u.email || '',
-          fullName: (u.user_metadata?.full_name || u.user_metadata?.name || 'Business Owner'),
-          mobileNumber: u.user_metadata?.mobile_number || '',
-          businessName: u.user_metadata?.business_name || 'My Google Business',
+          fullName: (u.user_metadata?.full_name || u.user_metadata?.name || localUser?.fullName || 'Business Owner'),
+          mobileNumber: u.user_metadata?.mobile_number || localUser?.mobileNumber || '',
+          businessName: u.user_metadata?.business_name || localUser?.businessName || 'My Google Business',
           isVerified: true,
+          role: localUser?.role || (u.email === 'info@arventaventures.online' ? 'admin' : 'user'),
+          status: localUser?.status || (u.user_metadata?.status) || 'active',
+          planId: localUser?.planId || 'pro-plan',
           createdAt: u.created_at,
         };
         const tok = session.access_token || ('sb_token_' + btoa(JSON.stringify({ userId: u.id, email: u.email })));
@@ -90,7 +102,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     // Realtime cross-tab and cross-window sync listener for user status changes
-    const handleSync = () => {
+    const handleSync = (e?: any) => {
+      if (e?.detail?.eventType === 'user_deleted') {
+        const delEmail = e.detail?.email?.toLowerCase();
+        const delId = e.detail?.userId;
+        const current = api.getMe()?.user;
+        if (current && (current.id === delId || (delEmail && current.email?.toLowerCase() === delEmail))) {
+          logout();
+          return;
+        }
+      }
       refreshUser();
     };
 
@@ -101,6 +122,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         bc = new BroadcastChannel('rankora_realtime_sync');
         bc.onmessage = (event) => {
+          if (
+            event.data?.eventType === 'user_deleted' ||
+            event.data?.type === 'user_deleted'
+          ) {
+            const delEmail = event.data?.email?.toLowerCase();
+            const delId = event.data?.userId;
+            const current = api.getMe()?.user;
+            if (current && (current.id === delId || (delEmail && current.email?.toLowerCase() === delEmail))) {
+              logout();
+            } else {
+              refreshUser();
+            }
+            return;
+          }
+
           if (
             event.data?.eventType === 'user_status_changed' ||
             event.data?.type === 'user_status_changed' ||
@@ -133,28 +169,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // When user is currently suspended, periodically re-check status every 3 seconds
-  // so if admin unsuspends them, their portal unlocks immediately without manual refresh
+  // Continuous real-time status sync: polls every 2.5 seconds so both suspensions and unsuspensions
+  // immediately take effect in active sessions across windows and tabs
   useEffect(() => {
-    if (!user || user.status !== 'suspended') return;
+    if (!token || !user) return;
 
     const interval = setInterval(async () => {
       try {
         const res = await api.getMe();
-        if (res.user && res.user.status !== 'suspended') {
+        if (res.user && res.user.status !== user.status) {
           setUser(res.user);
         }
       } catch {}
-    }, 3000);
+    }, 2500);
 
     return () => clearInterval(interval);
-  }, [user?.status]);
+  }, [token, user?.status, user?.email]);
 
   const login = (newToken: string, newUser: CustomerUser) => {
+    let resolvedStatus = newUser.status || 'active';
+    try {
+      const raw = localStorage.getItem('rankora_supabase_users');
+      if (raw && newUser.email) {
+        const parsed = JSON.parse(raw);
+        const liveUser = parsed[newUser.email.toLowerCase().trim()];
+        if (liveUser?.status) {
+          resolvedStatus = liveUser.status;
+        }
+      }
+    } catch {}
+
+    const finalUser: CustomerUser = {
+      ...newUser,
+      status: resolvedStatus,
+    };
+
     localStorage.setItem('rankora_token', newToken);
     localStorage.removeItem('reputepulse_token');
+    localStorage.setItem('rankora_current_user', JSON.stringify(finalUser));
     setToken(newToken);
-    setUser(newUser);
+    setUser(finalUser);
     setImpersonatorAdmin(null);
   };
 

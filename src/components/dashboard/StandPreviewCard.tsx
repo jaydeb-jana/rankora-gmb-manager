@@ -43,12 +43,12 @@ function StandLogo({
   const initial = bizName ? bizName.trim().charAt(0).toUpperCase() : 'G';
   return (
     <div
-      className={`w-14 h-14 rounded-full p-0.5 shadow-sm flex items-center justify-center shrink-0 mx-auto overflow-hidden ${borderColor} ${bgFallback}`}
+      className={`w-14 h-14 rounded-2xl p-1 shadow-sm flex items-center justify-center shrink-0 mx-auto overflow-hidden ${borderColor} ${bgFallback}`}
     >
       {logo ? (
-        <img src={logo} alt={bizName} className="w-full h-full object-cover rounded-full" />
+        <img src={logo} alt={bizName} className="w-full h-full object-contain select-none" />
       ) : (
-        <div className={`w-full h-full rounded-full flex items-center justify-center font-black text-xl select-none ${textColor}`}>
+        <div className={`w-full h-full rounded-xl flex items-center justify-center font-black text-xl select-none ${textColor}`}>
           {initial}
         </div>
       )}

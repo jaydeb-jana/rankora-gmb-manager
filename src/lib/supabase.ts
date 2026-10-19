@@ -62,6 +62,20 @@ const LOCAL_OTP_KEY = 'rankora_supabase_otps';
 const LOCAL_LOGO_KEY_PREFIX = 'rankora_logo_';
 const LOCAL_PLANS_KEY = 'rankora_pricing_plans';
 const LOCAL_IMPERSONATOR_KEY = 'rankora_impersonator_admin';
+const LOCAL_DELETED_USERS_KEY = 'rankora_deleted_users';
+
+export function getDeletedIdentifiers(): string[] {
+  try {
+    const raw = localStorage.getItem(LOCAL_DELETED_USERS_KEY);
+    return raw ? JSON.parse(raw).map((e: string) => (typeof e === 'string' ? e.toLowerCase().trim() : '')) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function getDeletedEmails(): string[] {
+  return getDeletedIdentifiers();
+}
 
 export const DEFAULT_PRICING_PLANS: PricingPlan[] = [
   {
@@ -110,175 +124,12 @@ export const DEFAULT_PRICING_PLANS: PricingPlan[] = [
   },
 ];
 
+// Pure empty array - NO hardcoded mock or demo users can ever auto-regenerate
 export const REAL_INITIAL_USERS: Array<{
   user: CustomerUser & { password?: string };
   settings?: Partial<BusinessSettings>;
   googleAccount?: Partial<GoogleBusinessAccount>;
-}> = [
-  {
-    user: {
-      id: 'usr_25908e14-d2dd-41cf-9454-5aed516228d0',
-      email: 'help.ecomart01@gmail.com',
-      fullName: 'Jaydeb Jana',
-      mobileNumber: '+91 7872490719',
-      isVerified: true,
-      role: 'user',
-      status: 'active',
-      planId: 'ultra-plan',
-      businessName: 'Arventa Ventures',
-      password: 'Jaydeb@123',
-      createdAt: '2026-10-12T18:22:37.071Z',
-    },
-    settings: {
-      id: 'biz-usr_25908e14-d2dd-41cf-9454-5aed516228d0',
-      userId: 'usr_25908e14-d2dd-41cf-9454-5aed516228d0',
-      businessName: 'Arventa Ventures',
-      category: 'Digital marketing agency',
-      googleReviewUrl: 'https://g.page/r/CbOgJVgsB5vAEAE/review',
-      customSlug: 'arventa-ventures',
-      brandTone: 'luxurious',
-      languagePreferences: [{ code: 'en', name: 'English', percentage: 100 }],
-      autoReplyEnabled: true,
-      autoReplyMode: 'approval',
-      minStarRating: 4,
-      responseDelayMinutes: 5,
-    },
-    googleAccount: {
-      connected: true,
-      accountId: 'accounts/google_29a9274e',
-      accountName: 'Authorized Google Business Account',
-      locationName: 'Verified Google Business Storefront',
-      rating: 4.9,
-      reviewCount: 46,
-    },
-  },
-  {
-    user: {
-      id: 'usr_151b4c83-384f-4fcb-9769-89012f000aab',
-      email: 'janajaydeb36@gmail.com',
-      fullName: 'Jaydeb Jana',
-      mobileNumber: '+91 8001608004',
-      isVerified: true,
-      role: 'user',
-      status: 'active',
-      planId: 'pro-plan',
-      businessName: "Jaydeb Jana's Business",
-      password: 'Jaydeb@123',
-      createdAt: '2026-10-16T05:29:22.584Z',
-    },
-    settings: {
-      id: 'biz-usr_151b4c83-384f-4fcb-9769-89012f000aab',
-      userId: 'usr_151b4c83-384f-4fcb-9769-89012f000aab',
-      businessName: "Jaydeb Jana's Business",
-      category: 'Local Service & Retail',
-      customSlug: 'jaydeb-jana-0aab',
-      brandTone: 'friendly',
-      languagePreferences: [{ code: 'en', name: 'English', percentage: 100 }],
-      autoReplyEnabled: false,
-      autoReplyMode: 'approval',
-      minStarRating: 4,
-      responseDelayMinutes: 5,
-    },
-    googleAccount: {
-      connected: false,
-    },
-  },
-  {
-    user: {
-      id: 'usr_sohagi_fashions',
-      email: 'sohagifashions@gmail.com',
-      fullName: 'Sohagi Fashions',
-      mobileNumber: '+91 7872490719',
-      isVerified: true,
-      role: 'user',
-      status: 'active',
-      planId: 'pro-plan',
-      businessName: 'Sohagi Fashions',
-      password: 'Jaydeb@123',
-      createdAt: '2026-10-14T10:15:00.000Z',
-    },
-    settings: {
-      id: 'biz-usr_sohagi_fashions',
-      userId: 'usr_sohagi_fashions',
-      businessName: 'Sohagi Fashions',
-      category: 'Fashion & Clothing Store',
-      customSlug: 'sohagi-fashions',
-      brandTone: 'friendly',
-      languagePreferences: [{ code: 'en', name: 'English', percentage: 100 }],
-      autoReplyEnabled: true,
-      autoReplyMode: 'approval',
-      minStarRating: 4,
-      responseDelayMinutes: 5,
-    },
-    googleAccount: {
-      connected: false,
-    },
-  },
-  {
-    user: {
-      id: 'usr_mateyjj394_proguidex',
-      email: 'mateyjj394@proguidex.com',
-      fullName: 'Jaydeb',
-      mobileNumber: '+91 8001698004',
-      isVerified: true,
-      role: 'user',
-      status: 'active',
-      planId: 'pro-plan',
-      businessName: 'Jana',
-      password: 'Jaydeb@123',
-      createdAt: '2026-10-18T11:00:00.000Z',
-    },
-    settings: {
-      id: 'biz-usr_mateyjj394_proguidex',
-      userId: 'usr_mateyjj394_proguidex',
-      businessName: 'Jana',
-      category: 'Local Service & Retail',
-      googleReviewUrl: 'https://g.page/r/CbOgJVgsB5vAEAE/review',
-      customSlug: 'jana-store',
-      brandTone: 'friendly',
-      languagePreferences: [{ code: 'en', name: 'English', percentage: 100 }],
-      autoReplyEnabled: true,
-      autoReplyMode: 'approval',
-      minStarRating: 4,
-      responseDelayMinutes: 5,
-    },
-    googleAccount: {
-      connected: false,
-    },
-  },
-  {
-    user: {
-      id: 'usr_mateyij394_proguidex',
-      email: 'mateyij394@proguidex.com',
-      fullName: 'Jaydeb',
-      mobileNumber: '+91 8001698004',
-      isVerified: true,
-      role: 'user',
-      status: 'active',
-      planId: 'pro-plan',
-      businessName: 'Jana',
-      password: 'Jaydeb@123',
-      createdAt: '2026-10-18T11:00:00.000Z',
-    },
-    settings: {
-      id: 'biz-usr_mateyij394_proguidex',
-      userId: 'usr_mateyij394_proguidex',
-      businessName: 'Jana',
-      category: 'Local Service & Retail',
-      googleReviewUrl: 'https://g.page/r/CbOgJVgsB5vAEAE/review',
-      customSlug: 'jana-store',
-      brandTone: 'friendly',
-      languagePreferences: [{ code: 'en', name: 'English', percentage: 100 }],
-      autoReplyEnabled: true,
-      autoReplyMode: 'approval',
-      minStarRating: 4,
-      responseDelayMinutes: 5,
-    },
-    googleAccount: {
-      connected: false,
-    },
-  },
-];
+}> = [];
 
 function purgeDemoUsersIfPresent(): void {
   try {
@@ -290,13 +141,30 @@ function purgeDemoUsersIfPresent(): void {
       'support@apexmotors.in',
       'manager@royaldental.com',
     ];
+    const deleted = getDeletedIdentifiers();
     let changed = false;
-    for (const email of demoEmails) {
-      if (users[email]) {
-        delete users[email];
+
+    Object.keys(users).forEach((k) => {
+      const u = users[k];
+      const kLow = k.toLowerCase().trim();
+      const uEmailLow = u?.email ? u.email.toLowerCase().trim() : '';
+      const uIdLow = u?.id ? u.id.toLowerCase().trim() : '';
+
+      if (
+        demoEmails.includes(kLow) ||
+        demoEmails.includes(uEmailLow) ||
+        deleted.includes(kLow) ||
+        (uEmailLow && deleted.includes(uEmailLow)) ||
+        (uIdLow && deleted.includes(uIdLow)) ||
+        kLow.startsWith('deleted_') ||
+        uEmailLow.startsWith('deleted_') ||
+        u?.fullName?.includes('[DELETED')
+      ) {
+        delete users[k];
         changed = true;
       }
-    }
+    });
+
     if (changed) {
       setLocalStore(LOCAL_USERS_KEY, users);
     }
@@ -312,8 +180,28 @@ function syncRealUsers(): void {
     const users = rawUsers ? JSON.parse(rawUsers) : {};
     const allSettings = getLocalStore<Record<string, any>>(LOCAL_SETTINGS_KEY, {});
     const googleAccounts = getLocalStore<Record<string, any>>(LOCAL_GOOGLE_KEY, {});
+    const deleted = getDeletedIdentifiers();
 
-    // Check active session user and ensure they are added to all users registry
+    // Aggressively remove any deleted users or emails
+    Object.keys(users).forEach((k) => {
+      const u = users[k];
+      const kLow = k.toLowerCase().trim();
+      const uEmailLow = u?.email ? u.email.toLowerCase().trim() : '';
+      const uIdLow = u?.id ? u.id.toLowerCase().trim() : '';
+
+      if (
+        deleted.includes(kLow) ||
+        (uEmailLow && deleted.includes(uEmailLow)) ||
+        (uIdLow && deleted.includes(uIdLow)) ||
+        kLow.startsWith('deleted_') ||
+        uEmailLow.startsWith('deleted_') ||
+        u?.fullName?.includes('[DELETED')
+      ) {
+        delete users[k];
+      }
+    });
+
+    // Check active session user and ensure they are added to all users registry if valid
     const activeUser = getLocalStore<any>(LOCAL_CURRENT_USER_KEY, null);
     if (
       activeUser &&
@@ -321,31 +209,14 @@ function syncRealUsers(): void {
       activeUser.role !== 'admin' &&
       activeUser.email !== 'info@arventaventures.online'
     ) {
-      if (!users[activeUser.email]) {
-        users[activeUser.email] = activeUser;
+      const activeEmailLow = activeUser.email.toLowerCase().trim();
+      const activeIdLow = (activeUser.id || '').toLowerCase().trim();
+      if (!deleted.includes(activeEmailLow) && !deleted.includes(activeIdLow) && !activeEmailLow.startsWith('deleted_')) {
+        if (!users[activeUser.email]) {
+          users[activeUser.email] = activeUser;
+        }
       }
     }
-
-    REAL_INITIAL_USERS.forEach(({ user, settings, googleAccount }) => {
-      users[user.email] = {
-        ...user,
-        ...(users[user.email] || {}),
-        status: users[user.email]?.status || user.status || 'active',
-        businessName: users[user.email]?.businessName || user.businessName,
-        mobileNumber: users[user.email]?.mobileNumber || user.mobileNumber,
-        fullName: users[user.email]?.fullName || user.fullName,
-      };
-      if (settings) {
-        allSettings[user.id] = {
-          ...settings,
-          ...(allSettings[user.id] || {}),
-          updatedAt: allSettings[user.id]?.updatedAt || settings.updatedAt || new Date().toISOString(),
-        };
-      }
-      if (googleAccount && !googleAccounts[user.id]) {
-        googleAccounts[user.id] = googleAccount;
-      }
-    });
 
     setLocalStore(LOCAL_USERS_KEY, users);
     setLocalStore(LOCAL_SETTINGS_KEY, allSettings);
@@ -678,6 +549,11 @@ export const supabaseService = {
       };
     }
 
+    const deletedList = getDeletedEmails();
+    if (deletedList.includes(email)) {
+      return { error: 'This account has been deleted by system administrators and no longer exists.' };
+    }
+
     try {
       // Sync real accounts
       syncRealUsers();
@@ -685,7 +561,20 @@ export const supabaseService = {
       const user = users[email];
 
       if (user && user.status === 'suspended') {
-        if (data.password === user.password) {
+        let passwordMatches = data.password === user.password;
+        if (!passwordMatches) {
+          try {
+            const { error: testErr } = await supabase.auth.signInWithPassword({
+              email,
+              password: data.password,
+            });
+            if (!testErr) {
+              passwordMatches = true;
+            }
+          } catch {}
+        }
+
+        if (passwordMatches) {
           const suspendedUser: CustomerUser = {
             id: user.id || 'usr_' + Math.random().toString(36).slice(2, 8),
             email: user.email,
@@ -721,6 +610,20 @@ export const supabaseService = {
       });
 
       if (!authError && authData.user) {
+        const authUserIdLow = (authData.user.id || '').toLowerCase().trim();
+        const authUserEmailLow = (authData.user.email || email).toLowerCase().trim();
+        if (
+          deletedList.includes(authUserIdLow) ||
+          deletedList.includes(authUserEmailLow) ||
+          authUserEmailLow.startsWith('deleted_')
+        ) {
+          try {
+            await supabase.auth.signOut();
+          } catch {}
+          return { error: 'This account has been deleted by system administrators and no longer exists.' };
+        }
+
+        const existingStatus = user?.status || users[email]?.status || 'active';
         const currentUser: CustomerUser = {
           id: authData.user.id,
           email: authData.user.email || email,
@@ -728,7 +631,7 @@ export const supabaseService = {
           mobileNumber: authData.user.user_metadata?.mobile_number || user?.mobileNumber || '',
           isVerified: true,
           role: user?.role || 'user',
-          status: user?.status || 'active',
+          status: existingStatus,
           planId: user?.planId || 'pro-plan',
           createdAt: authData.user.created_at || new Date().toISOString(),
         };
@@ -738,11 +641,12 @@ export const supabaseService = {
         localStorage.removeItem('reputepulse_token');
         setLocalStore(LOCAL_CURRENT_USER_KEY, currentUser);
 
-        // Save user to all users registry
+        // Save user to all users registry without resetting suspended status
         const usersRecord = getLocalStore<Record<string, any>>(LOCAL_USERS_KEY, {});
         usersRecord[currentUser.email] = {
           ...(usersRecord[currentUser.email] || {}),
           ...currentUser,
+          status: existingStatus,
           businessName: user?.businessName || authData.user.user_metadata?.business_name || `${currentUser.fullName}'s Business`,
         };
         setLocalStore(LOCAL_USERS_KEY, usersRecord);
@@ -908,12 +812,43 @@ export const supabaseService = {
   },
 
   getMe(): { user?: CustomerUser; error?: string } {
-    const currentUser = getLocalStore<CustomerUser | null>(LOCAL_CURRENT_USER_KEY, null);
+    let currentUser = getLocalStore<CustomerUser | null>(LOCAL_CURRENT_USER_KEY, null);
+    const usersRecord = getLocalStore<Record<string, any>>(LOCAL_USERS_KEY, {});
+
+    if (!currentUser) {
+      const token = localStorage.getItem('rankora_token') || localStorage.getItem('reputepulse_token');
+      if (token && token.startsWith('sb_token_')) {
+        try {
+          const payload = JSON.parse(atob(token.replace('sb_token_', '')));
+          if (payload.email && usersRecord[payload.email.toLowerCase()]) {
+            currentUser = { ...usersRecord[payload.email.toLowerCase()] };
+            setLocalStore(LOCAL_CURRENT_USER_KEY, currentUser);
+          }
+        } catch {}
+      }
+    }
+
     if (currentUser) {
-      const usersRecord = getLocalStore<Record<string, any>>(LOCAL_USERS_KEY, {});
-      if (currentUser.email && usersRecord[currentUser.email.toLowerCase()]) {
-        const liveUser = usersRecord[currentUser.email.toLowerCase()];
-        currentUser.status = liveUser.status || currentUser.status;
+      const email = currentUser.email ? currentUser.email.toLowerCase().trim() : '';
+      const id = currentUser.id ? currentUser.id.toLowerCase().trim() : '';
+      const deletedList = getDeletedIdentifiers();
+
+      if (
+        (email && deletedList.includes(email)) ||
+        (id && deletedList.includes(id)) ||
+        email.startsWith('deleted_')
+      ) {
+        localStorage.removeItem(LOCAL_CURRENT_USER_KEY);
+        localStorage.removeItem('rankora_token');
+        localStorage.removeItem('reputepulse_token');
+        return { error: 'No active session (account deleted).' };
+      }
+
+      const liveUser = email ? usersRecord[email] : null;
+      if (liveUser) {
+        currentUser.status = liveUser.status || currentUser.status || 'active';
+        currentUser.role = liveUser.role || currentUser.role;
+        currentUser.planId = liveUser.planId || currentUser.planId;
         setLocalStore(LOCAL_CURRENT_USER_KEY, currentUser);
       }
       return { user: currentUser };
@@ -1400,12 +1335,17 @@ export const supabaseService = {
           }
         }
 
+        const isSuspended =
+          data.google_account_info?.isSuspended === true ||
+          data.google_account_info?.status === 'suspended';
+
         return {
           businessName: data.business_name,
           businessLogo: data.google_account_info?.businessLogo || '',
           category: data.category,
           customSlug: data.custom_slug,
-          googleReviewUrl: data.google_review_url,
+          isSuspended,
+          googleReviewUrl: isSuspended ? '' : data.google_review_url,
           productsAndServices: data.products_and_services || '',
           services: data.google_account_info?.services || (data.products_and_services ? data.products_and_services.split(/[,;\n]+/).map((s: string) => s.trim()).filter(Boolean) : []),
           customerExperience: data.customer_experience || '',
@@ -1429,8 +1369,16 @@ export const supabaseService = {
 
     for (const biz of Object.values(allSettings)) {
       if (biz.customSlug?.toLowerCase() === sanitized) {
-        const owner = Object.values(usersRecord).find((u: any) => u.id === biz.userId);
-        const isSuspended = owner?.status === 'suspended';
+        const owner = Object.values(usersRecord).find(
+          (u: any) =>
+            u.id === biz.userId ||
+            (u.email && u.email.toLowerCase() === biz.userId?.toLowerCase())
+        );
+        const isSuspended =
+          owner?.status === 'suspended' ||
+          biz.isSuspended === true ||
+          (biz as any).status === 'suspended' ||
+          (biz as any).googleAccountInfo?.isSuspended === true;
 
         return {
           businessName: biz.businessName,
@@ -1458,12 +1406,14 @@ export const supabaseService = {
     const activeUser = getLocalStore<any>(LOCAL_CURRENT_USER_KEY, null);
     if (activeUser?.id && allSettings[activeUser.id]) {
       const biz = allSettings[activeUser.id];
+      const isSuspended = activeUser.status === 'suspended' || biz.isSuspended === true;
       return {
         businessName: biz.businessName,
         businessLogo: biz.businessLogo,
         category: biz.category,
         customSlug: biz.customSlug,
-        googleReviewUrl: biz.googleReviewUrl,
+        isSuspended,
+        googleReviewUrl: isSuspended ? '' : biz.googleReviewUrl,
         productsAndServices: biz.productsAndServices || '',
         services: biz.services || (biz.productsAndServices ? biz.productsAndServices.split(/[,;\n]+/).map((s: string) => s.trim()).filter(Boolean) : []),
         customerExperience: biz.customerExperience || '',
@@ -1497,6 +1447,7 @@ export const supabaseService = {
   async getAllUsers(): Promise<{ users: CustomerUser[] }> {
     syncRealUsers();
     const realUsersMap: Record<string, CustomerUser> = {};
+    const deleted = getDeletedIdentifiers();
 
     // 1. Load local persistence stores first to prevent TDZ reference errors
     const usersRecord = getLocalStore<Record<string, any>>(LOCAL_USERS_KEY, {});
@@ -1527,9 +1478,21 @@ export const supabaseService = {
         profiles.forEach((p: any) => {
           if (!p.email) return;
           const email = p.email.toLowerCase().trim();
-          if (email === 'contact@arventacafe.com' || email === 'support@apexmotors.in' || email === 'manager@royaldental.com') {
+          const pId = p.id ? p.id.toLowerCase().trim() : '';
+
+          // Completely skip if deleted, marked as deleted, or fake demo
+          if (
+            deleted.includes(email) ||
+            deleted.includes(pId) ||
+            email.startsWith('deleted_') ||
+            p.full_name?.includes('[DELETED') ||
+            email === 'contact@arventacafe.com' ||
+            email === 'support@apexmotors.in' ||
+            email === 'manager@royaldental.com'
+          ) {
             return;
           }
+
           const existingLocal = usersRecord[email];
           realUsersMap[email] = {
             id: p.id || existingLocal?.id || 'usr_' + Math.random().toString(36).slice(2, 8),
@@ -1554,10 +1517,20 @@ export const supabaseService = {
     Object.values(usersRecord).forEach((u: any) => {
       if (!u || !u.email) return;
       const email = u.email.toLowerCase().trim();
-      // Skip fake demo emails completely
-      if (email === 'contact@arventacafe.com' || email === 'support@apexmotors.in' || email === 'manager@royaldental.com') {
+      const uId = u.id ? u.id.toLowerCase().trim() : '';
+
+      if (
+        deleted.includes(email) ||
+        deleted.includes(uId) ||
+        email.startsWith('deleted_') ||
+        u.fullName?.includes('[DELETED') ||
+        email === 'contact@arventacafe.com' ||
+        email === 'support@apexmotors.in' ||
+        email === 'manager@royaldental.com'
+      ) {
         return;
       }
+
       const userSettings = allSettings[u.id];
       const existing = realUsersMap[email];
       realUsersMap[email] = {
@@ -1573,25 +1546,6 @@ export const supabaseService = {
         planId: u.planId || existing?.planId || 'pro-plan',
         password: u.password || existing?.password || 'Jaydeb@123',
       };
-    });
-
-    // 4. Guarantee all initial verified users are included
-    REAL_INITIAL_USERS.forEach(({ user, settings }) => {
-      const email = user.email.toLowerCase().trim();
-      if (!realUsersMap[email]) {
-        realUsersMap[email] = {
-          ...user,
-          businessName: settings?.businessName || user.businessName || `${user.fullName}'s Business`,
-          password: user.password || usersRecord[email]?.password || 'Jaydeb@123',
-        };
-      } else {
-        if (!realUsersMap[email].password) {
-          realUsersMap[email].password = user.password || usersRecord[email]?.password || 'Jaydeb@123';
-        }
-        if (!realUsersMap[email].businessName && settings?.businessName) {
-          realUsersMap[email].businessName = settings.businessName;
-        }
-      }
     });
 
     return { users: Object.values(realUsersMap) };
@@ -1656,40 +1610,202 @@ export const supabaseService = {
     return { success: true, user: updatedUser };
   },
 
-  async deleteUser(userId: string): Promise<{ success: boolean; error?: string }> {
-    if (userId === 'admin_arventa_super') {
+  async deleteUser(userId: string, emailHint?: string): Promise<{ success: boolean; error?: string }> {
+    if (userId === 'admin_arventa_super' || (emailHint && emailHint.toLowerCase() === ADMIN_CREDENTIALS.email.toLowerCase())) {
       return { success: false, error: 'Cannot delete the Super Administrator account.' };
     }
 
     const usersRecord = getLocalStore<Record<string, any>>(LOCAL_USERS_KEY, {});
-    const targetEmail = Object.keys(usersRecord).find((e) => usersRecord[e].id === userId);
 
-    if (targetEmail) {
-      delete usersRecord[targetEmail];
-      setLocalStore(LOCAL_USERS_KEY, usersRecord);
+    // Find all emails and IDs matching this user
+    let targetEmail = (emailHint ? emailHint.toLowerCase().trim() : '');
+    if (!targetEmail) {
+      const matchKey = Object.keys(usersRecord).find((k) => {
+        const u = usersRecord[k];
+        if (!u) return false;
+        if (u.id === userId || k.toLowerCase() === userId.toLowerCase() || u.email?.toLowerCase() === userId.toLowerCase()) {
+          return true;
+        }
+        return false;
+      });
+      if (matchKey) {
+        targetEmail = (usersRecord[matchKey]?.email || matchKey).toLowerCase().trim();
+      }
     }
 
-    // Clean up settings, reviews, google account
+    const matchedUser = targetEmail ? usersRecord[targetEmail] : null;
+    const targetUserId = matchedUser?.id || userId;
+
+    // 1. Permanently register in deleted list (both email and user IDs)
+    const deletedList = getDeletedIdentifiers();
+    const toAdd = [targetEmail, userId, targetUserId].filter(Boolean).map((s) => s.toLowerCase().trim());
+    let listChanged = false;
+    for (const item of toAdd) {
+      if (item && !deletedList.includes(item)) {
+        deletedList.push(item);
+        listChanged = true;
+      }
+    }
+    if (listChanged) {
+      setLocalStore(LOCAL_DELETED_USERS_KEY, deletedList);
+    }
+
+    // 2. Completely remove from users registry (by email, id, or key)
+    Object.keys(usersRecord).forEach((k) => {
+      const u = usersRecord[k];
+      const kLow = k.toLowerCase().trim();
+      const uEmailLow = u?.email ? u.email.toLowerCase().trim() : '';
+      const uIdLow = u?.id ? u.id.toLowerCase().trim() : '';
+      const userIdLow = userId.toLowerCase().trim();
+      const targetUserIdLow = targetUserId.toLowerCase().trim();
+      const targetEmailLow = targetEmail ? targetEmail.toLowerCase().trim() : '';
+
+      if (
+        kLow === userIdLow ||
+        kLow === targetUserIdLow ||
+        (targetEmailLow && kLow === targetEmailLow) ||
+        uIdLow === userIdLow ||
+        uIdLow === targetUserIdLow ||
+        (targetEmailLow && uEmailLow === targetEmailLow) ||
+        deletedList.includes(kLow) ||
+        (uEmailLow && deletedList.includes(uEmailLow)) ||
+        (uIdLow && deletedList.includes(uIdLow))
+      ) {
+        delete usersRecord[k];
+      }
+    });
+    setLocalStore(LOCAL_USERS_KEY, usersRecord);
+
+    // 3. Completely delete business settings
     const allSettings = getLocalStore<Record<string, any>>(LOCAL_SETTINGS_KEY, {});
     delete allSettings[userId];
+    delete allSettings[targetUserId];
+    Object.keys(allSettings).forEach((k) => {
+      const s = allSettings[k];
+      const sUserLow = (s?.userId || '').toLowerCase().trim();
+      if (
+        sUserLow === userId.toLowerCase().trim() ||
+        sUserLow === targetUserId.toLowerCase().trim() ||
+        (sUserLow && deletedList.includes(sUserLow))
+      ) {
+        delete allSettings[k];
+      }
+    });
     setLocalStore(LOCAL_SETTINGS_KEY, allSettings);
 
+    // 4. Completely delete reviews
     const allReviews = getLocalStore<Record<string, any>>(LOCAL_REVIEWS_KEY, {});
     delete allReviews[userId];
+    delete allReviews[targetUserId];
+    Object.keys(allReviews).forEach((k) => {
+      if (
+        k.toLowerCase() === userId.toLowerCase() ||
+        k.toLowerCase() === targetUserId.toLowerCase() ||
+        deletedList.includes(k.toLowerCase())
+      ) {
+        delete allReviews[k];
+      }
+    });
     setLocalStore(LOCAL_REVIEWS_KEY, allReviews);
 
+    // 5. Completely delete connected Google accounts
     const allGoogle = getLocalStore<Record<string, any>>(LOCAL_GOOGLE_KEY, {});
     delete allGoogle[userId];
+    delete allGoogle[targetUserId];
+    Object.keys(allGoogle).forEach((k) => {
+      if (
+        k.toLowerCase() === userId.toLowerCase() ||
+        k.toLowerCase() === targetUserId.toLowerCase() ||
+        deletedList.includes(k.toLowerCase())
+      ) {
+        delete allGoogle[k];
+      }
+    });
     setLocalStore(LOCAL_GOOGLE_KEY, allGoogle);
 
-    // Delete from Supabase profiles
+    // 6. Delete OTP records
+    const otps = getLocalStore<Record<string, any>>(LOCAL_OTP_KEY, {});
+    if (targetEmail) {
+      delete otps[targetEmail];
+    }
+    Object.keys(otps).forEach((k) => {
+      if (deletedList.includes(k.toLowerCase().trim())) {
+        delete otps[k];
+      }
+    });
+    setLocalStore(LOCAL_OTP_KEY, otps);
+
+    // 7. Delete logo assets from local storage
+    try {
+      localStorage.removeItem(LOCAL_LOGO_KEY_PREFIX + userId);
+      localStorage.removeItem(LOCAL_LOGO_KEY_PREFIX + targetUserId);
+    } catch {}
+
+    // 8. If the deleted user is currently logged in, terminate their active session
+    const currentUser = getLocalStore<CustomerUser | null>(LOCAL_CURRENT_USER_KEY, null);
+    if (
+      currentUser &&
+      (currentUser.id === userId ||
+        currentUser.id === targetUserId ||
+        (targetEmail && currentUser.email?.toLowerCase().trim() === targetEmail.toLowerCase().trim()) ||
+        deletedList.includes(currentUser.id.toLowerCase().trim()) ||
+        (currentUser.email && deletedList.includes(currentUser.email.toLowerCase().trim())))
+    ) {
+      localStorage.removeItem(LOCAL_CURRENT_USER_KEY);
+      localStorage.removeItem('rankora_token');
+      localStorage.removeItem('reputepulse_token');
+    }
+
+    // 9. Permanent hard-delete and wipe from Supabase PostgreSQL tables
     try {
       if (targetEmail) {
+        // Also update profile to mark deleted so it can never be retrieved even if RLS denies delete
+        await supabase.from('profiles').update({
+          full_name: '[DELETED_USER]',
+          email: `deleted_${Date.now()}_${targetEmail.replace(/[^a-zA-Z0-9]/g, '')}@deleted.local`,
+          mobile_number: '',
+          updated_at: new Date().toISOString(),
+        }).eq('email', targetEmail);
+
         await supabase.from('profiles').delete().eq('email', targetEmail);
+      }
+      await supabase.from('profiles').delete().eq('id', userId);
+      await supabase.from('profiles').delete().eq('id', targetUserId);
+    } catch (e) {
+      console.warn('Supabase profile deletion notice:', e);
+    }
+
+    try {
+      await supabase.from('business_settings').delete().or(`user_id.eq.${userId},user_id.eq.${targetUserId}`);
+    } catch {}
+
+    try {
+      await supabase.from('customer_reviews').delete().or(`user_id.eq.${userId},user_id.eq.${targetUserId}`);
+    } catch {}
+
+    try {
+      await supabase.from('google_accounts').delete().or(`user_id.eq.${userId},user_id.eq.${targetUserId}`);
+    } catch {}
+
+    try {
+      await supabase.from('reviews').delete().or(`user_id.eq.${userId},user_id.eq.${targetUserId}`);
+    } catch {}
+
+    try {
+      if (targetEmail) {
+        await supabase.from('contact_inquiries').delete().eq('email', targetEmail);
       }
     } catch {}
 
-    broadcastUsersChange('user_deleted', { userId });
+    // 10. Broadcast realtime deletion to all open tabs and windows
+    broadcastUsersChange('user_deleted', { userId, email: targetEmail, targetUserId });
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        const bc = new BroadcastChannel('rankora_realtime_sync');
+        bc.postMessage({ type: 'user_deleted', userId, email: targetEmail, targetUserId, timestamp: Date.now() });
+        bc.close();
+      }
+    } catch {}
 
     return { success: true };
   },
@@ -1746,6 +1862,46 @@ export const supabaseService = {
         .or(`id.eq.${userId},email.eq.${targetKey}`);
     } catch (e) {
       console.warn('Supabase profile status update notice:', e);
+    }
+
+    // Sync to business_settings (both local and Supabase)
+    const targetUserId = usersRecord[targetKey]?.id || userId;
+    const allSettings = getLocalStore<Record<string, BusinessSettings>>(LOCAL_SETTINGS_KEY, {});
+    let targetBizKey = Object.keys(allSettings).find((k) => {
+      const b = allSettings[k];
+      return b.userId === targetUserId || b.userId === userId || k === targetUserId || k === userId;
+    });
+
+    if (!targetBizKey) {
+      // Find by custom slug or create
+      targetBizKey = targetUserId;
+    }
+
+    if (allSettings[targetBizKey]) {
+      allSettings[targetBizKey].isSuspended = newStatus === 'suspended';
+      (allSettings[targetBizKey] as any).status = newStatus;
+      if (newStatus === 'suspended') {
+        allSettings[targetBizKey].autoReplyEnabled = false;
+      }
+      setLocalStore(LOCAL_SETTINGS_KEY, allSettings);
+    }
+
+    // Sync to Supabase business_settings table
+    try {
+      await supabase
+        .from('business_settings')
+        .update({
+          google_account_info: {
+            isSuspended: newStatus === 'suspended',
+            status: newStatus,
+            suspendedAt: newStatus === 'suspended' ? new Date().toISOString() : null,
+          },
+          auto_reply_enabled: newStatus === 'suspended' ? false : true,
+          updated_at: new Date().toISOString(),
+        })
+        .or(`user_id.eq.${userId},user_id.eq.${targetUserId}`);
+    } catch (e) {
+      console.warn('Supabase business_settings suspension sync note:', e);
     }
 
     // Also update current active session if it matches target user

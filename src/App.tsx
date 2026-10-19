@@ -427,7 +427,12 @@ function CustomerPortalContent() {
   }
 
   // Check if account has been suspended by Google Compliance / Admin
-  if (user && user.status === 'suspended') {
+  const isAccountSuspended =
+    user?.status === 'suspended' ||
+    businessSettings?.isSuspended === true ||
+    (businessSettings as any)?.googleAccountInfo?.isSuspended === true;
+
+  if (user && isAccountSuspended) {
     return (
       <SuspendedAccountNotice
         user={user}

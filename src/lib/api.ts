@@ -354,8 +354,8 @@ export const api = {
     return supabaseService.updateUser(userId, data);
   },
 
-  async deleteUser(userId: string): Promise<{ success: boolean; error?: string }> {
-    return supabaseService.deleteUser(userId);
+  async deleteUser(userId: string, email?: string): Promise<{ success: boolean; error?: string }> {
+    return supabaseService.deleteUser(userId, email);
   },
 
   async toggleSuspendUser(userId: string, email?: string): Promise<{ success: boolean; status?: 'active' | 'suspended'; error?: string }> {

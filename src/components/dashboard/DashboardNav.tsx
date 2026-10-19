@@ -297,11 +297,11 @@ export function DashboardNav({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5 min-w-0">
               {businessLogo ? (
-                <div className="w-8 h-8 rounded-full bg-white border border-[#dadce0] overflow-hidden shadow-2xs shrink-0 select-none flex items-center justify-center">
+                <div className="w-8 h-8 rounded-full bg-white border border-[#dadce0] overflow-hidden shadow-2xs shrink-0 select-none flex items-center justify-center p-0.5">
                   <img
                     src={businessLogo}
                     alt={businessName || user.fullName}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain select-none"
                   />
                 </div>
               ) : (

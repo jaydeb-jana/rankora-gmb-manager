@@ -34,6 +34,11 @@ CREATE POLICY "Users can insert own profile"
     ON public.profiles FOR INSERT
     WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Users can delete own profile" ON public.profiles;
+CREATE POLICY "Users can delete own profile"
+    ON public.profiles FOR DELETE
+    USING (true);
+
 
 -- 3. Business Settings Table
 CREATE TABLE IF NOT EXISTS public.business_settings (
@@ -81,6 +86,11 @@ CREATE POLICY "Customers can insert own business settings"
     ON public.business_settings FOR INSERT
     WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Customers can delete own business settings" ON public.business_settings;
+CREATE POLICY "Customers can delete own business settings"
+    ON public.business_settings FOR DELETE
+    USING (true);
+
 
 -- 4. Customer Reviews Table
 CREATE TABLE IF NOT EXISTS public.customer_reviews (
@@ -115,6 +125,11 @@ CREATE POLICY "Customers can update own reviews"
 CREATE POLICY "Customers can insert own reviews"
     ON public.customer_reviews FOR INSERT
     WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Customers can delete own reviews" ON public.customer_reviews;
+CREATE POLICY "Customers can delete own reviews"
+    ON public.customer_reviews FOR DELETE
+    USING (true);
 
 
 -- 5. Email OTP Verification Table (Used with server-side validation)

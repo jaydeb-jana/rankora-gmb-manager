@@ -65,6 +65,7 @@ export function BusinessSettingsTab({
   const [googleReviewUrl, setGoogleReviewUrl] = useState(initialReviewUrl);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isUserEditingLogo = useRef(false);
 
   // Synchronize local form inputs when settings prop updates
   useEffect(() => {
@@ -72,7 +73,7 @@ export function BusinessSettingsTab({
       if (settings.businessName !== undefined) {
         setBusinessName(settings.businessName);
       }
-      if (settings.businessLogo !== undefined) {
+      if (!isUserEditingLogo.current && settings.businessLogo !== undefined) {
         setBusinessLogo(settings.businessLogo || '');
       }
       if (settings.googleReviewUrl !== undefined) {
@@ -105,12 +106,12 @@ export function BusinessSettingsTab({
         return;
       }
 
-      // 2. For Raster Images (PNG, JPG, WebP), resize cleanly to max 420x420 while preserving alpha transparency
+      // 2. For Raster Images (PNG, JPG, WebP, GIF), resize cleanly to max 512x512 while preserving 100% alpha transparency
       const reader = new FileReader();
       reader.onload = () => {
         const img = new Image();
         img.onload = () => {
-          const maxDim = 420;
+          const maxDim = 512;
           let width = img.width;
           let height = img.height;
 
@@ -141,22 +142,13 @@ export function BusinessSettingsTab({
           ctx.imageSmoothingQuality = 'high';
           ctx.drawImage(img, 0, 0, width, height);
 
-          // For PNG and WebP, preserve PNG format so transparent backgrounds never turn black
-          const isTransparent = file.type === 'image/png' || file.type === 'image/webp';
+          // For PNG, WebP, GIF: preserve lossless PNG format so transparent backgrounds never degrade or turn black
+          const isTransparent = file.type === 'image/png' || file.type === 'image/webp' || file.type === 'image/gif';
           if (isTransparent) {
-            try {
-              // Try webp with transparency first for ultra-lightweight size
-              const webp = canvas.toDataURL('image/webp', 0.9);
-              if (webp.startsWith('data:image/webp')) {
-                resolve(webp);
-                return;
-              }
-            } catch {}
-            // Fallback to standard PNG
             resolve(canvas.toDataURL('image/png'));
           } else {
             // For standard JPEG/others
-            resolve(canvas.toDataURL('image/jpeg', 0.88));
+            resolve(canvas.toDataURL('image/jpeg', 0.92));
           }
         };
         img.onerror = () => resolve(reader.result as string);
@@ -167,7 +159,7 @@ export function BusinessSettingsTab({
     });
   };
 
-  // Handle Logo File Selection with instant preview
+  // Handle Logo File Selection with instant preview and auto-sync
   const handleLogoFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -187,23 +179,44 @@ export function BusinessSettingsTab({
 
     try {
       const processedDataUrl = await processLogoFile(file);
+      isUserEditingLogo.current = true;
       setBusinessLogo(processedDataUrl);
       setLogoFileName(file.name);
       const approxKb = Math.round((processedDataUrl.length * 3) / 4 / 1024);
       setLogoFileSize(`${approxKb} KB`);
-      showSuccess('Logo loaded! Click "Save Changes" to apply across all portals.');
+
+      // Instantly save to Supabase and storage so it reflects immediately across all tabs and review pages
+      const res = await api.updateBusinessSettings({
+        businessLogo: processedDataUrl,
+      });
+      if (res.settings) {
+        onUpdateSettings(res.settings);
+      }
+      showSuccess('Logo uploaded and applied successfully across all portals!');
     } catch {
       setLogoError('Failed to process image file. Please try another image.');
     }
   };
 
-  const handleRemoveLogo = () => {
+  const handleRemoveLogo = async () => {
+    isUserEditingLogo.current = true;
     setBusinessLogo('');
     setLogoFileName('');
     setLogoFileSize('');
     setLogoError('');
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
+    }
+    try {
+      const res = await api.updateBusinessSettings({
+        businessLogo: '',
+      });
+      if (res.settings) {
+        onUpdateSettings(res.settings);
+      }
+      showSuccess('Logo removed successfully.');
+    } catch {
+      showError('Failed to remove logo.');
     }
   };
 
@@ -286,12 +299,12 @@ export function BusinessSettingsTab({
           </div>
 
           <div className="p-5 sm:p-6 bg-[#f8fafd] border border-[#e2e8f0] rounded-2xl flex flex-col sm:flex-row items-center sm:items-start gap-6 transition-colors">
-            {/* Circular Logo Preview Avatar with subtle alpha checkerboard pattern */}
+            {/* Square/Rounded-2xl Logo Preview Card with object-contain */}
             <div
-              className="relative w-32 h-32 rounded-full border-2 border-dashed border-[#94a3b8] bg-white flex items-center justify-center shrink-0 overflow-hidden shadow-sm transition-all"
+              className="relative w-32 h-32 rounded-2xl border-2 border-dashed border-[#94a3b8] bg-white flex items-center justify-center shrink-0 overflow-hidden shadow-xs p-2.5 transition-all"
               style={{
                 backgroundImage: businessLogo
-                  ? 'linear-gradient(45deg, #f1f5f9 25%, transparent 25%), linear-gradient(-45deg, #f1f5f9 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #f1f5f9 75%), linear-gradient(-45deg, transparent 75%, #f1f5f9 75%)'
+                  ? 'linear-gradient(45deg, #f8fafd 25%, transparent 25%), linear-gradient(-45deg, #f8fafd 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #f8fafd 75%), linear-gradient(-45deg, transparent 75%, #f8fafd 75%)'
                   : 'none',
                 backgroundSize: '16px 16px',
                 backgroundPosition: '0 0, 0 8px, 8px -8px, -8px 0px',
@@ -302,18 +315,18 @@ export function BusinessSettingsTab({
                   <img
                     src={businessLogo}
                     alt={businessName || 'Business Logo'}
-                    className="w-full h-full object-cover rounded-full select-none"
+                    className="w-full h-full object-contain select-none"
                   />
-                  <span className="absolute bottom-1 right-2 px-2 py-0.5 rounded-full text-[9px] font-bold bg-[#137333] text-white shadow-xs border-2 border-white">
-                    Ready
+                  <span className="absolute bottom-1.5 right-1.5 px-2 py-0.5 rounded-full text-[9px] font-bold bg-[#137333] text-white shadow-xs border border-white">
+                    Active
                   </span>
                 </>
               ) : (
-                <div className="text-center p-3 select-none">
-                  <div className="w-10 h-10 rounded-full bg-[#f1f3f4] flex items-center justify-center mx-auto mb-1 text-[#5f6368]">
+                <div className="text-center p-2 select-none">
+                  <div className="w-10 h-10 rounded-xl bg-[#f1f3f4] flex items-center justify-center mx-auto mb-1 text-[#5f6368]">
                     <ImageIcon className="w-5 h-5 text-[#80868b]" />
                   </div>
-                  <span className="text-[10px] font-semibold text-[#5f6368] block leading-tight">
+                  <span className="text-[11px] font-semibold text-[#5f6368] block leading-tight">
                     Upload Logo
                   </span>
                 </div>
@@ -352,10 +365,15 @@ export function BusinessSettingsTab({
                 )}
               </div>
 
-              {logoFileName ? (
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#e6f4ea] border border-[#ceead6] text-xs font-medium text-[#137333]">
-                  <CheckCircle2 className="w-4 h-4 text-[#1e8e3e] shrink-0" />
-                  <span>{logoFileName} {logoFileSize && `(${logoFileSize})`}</span>
+              {businessLogo ? (
+                <div className="space-y-1.5">
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#e6f4ea] border border-[#ceead6] text-xs font-medium text-[#137333]">
+                    <CheckCircle2 className="w-4 h-4 text-[#1e8e3e] shrink-0" />
+                    <span>{logoFileName || 'Logo ready'} {logoFileSize && `(${logoFileSize})`}</span>
+                  </div>
+                  <p className="text-[11px] text-[#5f6368]">
+                    Displayed in full aspect ratio across customer review page, header, and printed QR stands.
+                  </p>
                 </div>
               ) : (
                 <p className="text-xs text-[#5f6368] leading-relaxed max-w-lg">

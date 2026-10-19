@@ -134,12 +134,12 @@ export function DashboardHeader({
                 <div
                   title={`${businessName || user.fullName} (${user.email})`}
                   onClick={onNavigateToSettings}
-                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white border border-[#dadce0] overflow-hidden shadow-2xs select-none shrink-0 cursor-pointer flex items-center justify-center hover:opacity-90 transition-opacity"
+                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white border border-[#dadce0] overflow-hidden shadow-2xs select-none shrink-0 cursor-pointer flex items-center justify-center p-0.5 hover:opacity-90 transition-opacity"
                 >
                   <img
                     src={businessLogo}
                     alt={businessName || user.fullName}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain select-none"
                   />
                 </div>
               ) : (
