@@ -245,6 +245,32 @@ export interface GenerateDraftOptions {
   language?: string;
   apiKeyOverride?: string;
 }
+export function getSmartFallbackReview(options: GenerateDraftOptions): string {
+  const lang = (options.language || 'English').trim();
+  const isBengali = /bengali|bangla|bn/i.test(lang);
+  const rating = Number(options.starRating) || 5;
+  const bizName = options.businessName || 'Business';
+  const service = (options.selectedServices && options.selectedServices[0]) || '';
+
+  if (isBengali) {
+    if (rating >= 4) {
+      return `${bizName}-এ ${service ? service + '-এর ' : ''}কাজের অভিজ্ঞতা খুবই চমৎকার ছিল। কর্মীদের ব্যবহার দারুণ অমায়িক এবং কাজের ফিনিশিংও খুব নিখুঁত। সঠিক সময়ে মানসম্মত সেবা পেয়েছি, সবাইকে নিঃসন্দেহে রিকমেন্ড করব!`;
+    } else if (rating === 3) {
+      return `${bizName}-এর স্টাফদের ব্যবহার ভালো ছিল এবং পরিবেশও সুন্দর। তবে কাজের ক্ষেত্রে কিছুটা সময় বেশি লেগেছে। ভবিষ্যতে সময় ব্যবস্থাপনায় আর একটু নজর দিলে আরও ভালো হবে।`;
+    } else {
+      return `${bizName}-এর কর্মচারীদের কথাবার্তা ভদ্র ছিল। তবে ডেলিভারি বা কাজের ক্ষেত্রে কিছুটা অনাকাঙ্ক্ষিত দেরি হয়েছিল। আশা করব কর্তৃপক্ষ সময়ের দিকটিতে নজর দিয়ে সামনের দিনে আরও দ্রুত সেবা নিশ্চিত করবেন।`;
+    }
+  }
+
+  // English fallback
+  if (rating >= 4) {
+    return `Had a wonderful experience at ${bizName}${service ? ` for ${service}` : ''}. The team was extremely polite, attentive, and delivered top-notch work with zero hassle. Pricing was fair and turnaround was prompt. Highly recommend them!`;
+  } else if (rating === 3) {
+    return `The staff at ${bizName} were pleasant and welcoming. While the overall service was decent, the wait time was a bit longer than expected due to rush. A little more speed would make the experience great.`;
+  } else {
+    return `The staff at ${bizName} were courteous during my visit. However, there was a noticeable delay in completing the service. I hope management works on streamlining turnaround times so future visits are much smoother.`;
+  }
+}
 
 export async function generateCustomerReviewDraft(options: GenerateDraftOptions): Promise<string> {
   const ai = getAiClient(options.apiKeyOverride);
@@ -252,39 +278,51 @@ export async function generateCustomerReviewDraft(options: GenerateDraftOptions)
     throw new Error('Gemini API key is not configured for this business. Please add a valid API key in the dashboard API settings.');
   }
 
-  const lang = options.language || 'English';
+  const lang = (options.language || 'English').trim();
   const rating = Number(options.starRating) || 5;
   const isPositive = rating >= 4;
   const isNeutral = rating === 3;
   const isNegative = rating <= 2;
+  const isBengali = /bengali|bangla|bn/i.test(lang);
+  const isHindi = /hindi|hi/i.test(lang);
 
   let personaInstruction = '';
   let ratingPromptGuide = '';
 
   if (isPositive) {
-    personaInstruction = `You are a real, satisfied customer writing a genuine, positive ${rating}-star Google Business Profile review.
-Express authentic customer satisfaction, praise, and appreciation in a warm, natural, and conversational tone.`;
-    ratingPromptGuide = `Write a genuine, positive ${rating}-star customer review praising "${options.businessName}" (${options.category}).`;
+    personaInstruction = `You are an authentic, delighted local customer writing a genuine, highly personal 5-star Google Business Profile review.
+Your review must sound 100% human, sincere, and heartfelt based on a real in-person visit.
+Express deep personal satisfaction with their craftsmanship, courteous behavior, and trustworthiness.`;
+    ratingPromptGuide = `Draft a genuine, personal 5-star customer review praising "${options.businessName}" (${options.category}).`;
   } else if (isNeutral) {
-    personaInstruction = `You are a real customer writing an honest, balanced 3-star Google Business Profile review.
-Mention both acceptable points and areas that could be improved. Keep the tone moderate, fair, and constructive.`;
-    ratingPromptGuide = `Write a balanced, realistic 3-star customer review with constructive feedback for "${options.businessName}" (${options.category}).`;
+    personaInstruction = `You are a fair, polite customer writing balanced and constructive feedback for "${options.businessName}".
+*** CRITICAL REPUTATION SAFETY RULE ***:
+Maintain high goodwill and civility. NEVER use aggressive, harsh, or damaging language.
+Acknowledge positive aspects (like polite staff, clean environment, or good effort) while offering gentle, courteous suggestions for improvement (such as wait time or coordination).`;
+    ratingPromptGuide = `Draft a polite, balanced, and constructive customer review with helpful suggestions for "${options.businessName}" (${options.category}).`;
   } else {
-    personaInstruction = `You are a real, disappointed customer writing an honest, critical ${rating}-star Google Business Profile review.
-Write in a frustrated, dissatisfied, yet realistic customer tone detailing poor service, issues faced, and disappointment.
-Do NOT praise the business or sound satisfied; reflect the genuine frustration and dissatisfaction of a ${rating}-star experience.`;
-    ratingPromptGuide = `Write an authentic, critical ${rating}-star customer review expressing dissatisfaction, disappointment, and issues faced with "${options.businessName}" (${options.category}).`;
+    // Critical (1 or 2 stars) - REPUTATION SHIELD & CONSTRUCTIVE REFRAMING
+    personaInstruction = `You are a thoughtful, dignified customer providing respectful and constructive feedback for "${options.businessName}".
+*** ABSOLUTE REPUTATION SAFETY MANDATE ***:
+- NEVER write toxic, angry, abusive, defamatory, or destructive rants (e.g., do NOT say "worst place", "scam", "cheat", "rude staff", "waste of money", or "never visit").
+- Always safeguard the business's public goodwill and Google Maps standing while giving the customer's feedback a polite, constructive voice.
+- Reframe any dissatisfaction or complaints into polite, dignified, constructive feedback.
+- Acknowledge courtesy or good intent first (e.g., the staff was well-mannered, the shop was accessible, or intentions were good).
+- Then gently point out the specific area where they can improve (e.g., "During peak hours, waiting time was slightly longer than expected" or "communication regarding turnaround time could be a bit clearer").
+- Conclude on a polite, hopeful note looking forward to seeing better coordination on future visits.`;
+    ratingPromptGuide = `Draft a courteous, constructive customer review with gentle feedback and suggestions for "${options.businessName}" (${options.category}), strictly avoiding all toxic, harsh, or damaging words.`;
   }
 
   const systemInstruction = `${personaInstruction}
-Write in first-person natural perspective, exactly like everyday people write reviews on Google Maps.
-Rules:
-- Sound 100% human, casual, and authentic.
-- Avoid sounding like an advertisement, marketing copy, or an AI bot.
-- Do NOT use formal corporate jargon, buzzwords (like "testament", "seamless blend", "nestled"), hashtags, or quotation marks.
-- Follow these guidelines: ${options.reviewWritingRules || (isPositive ? 'Keep it natural, genuine and specific to the service received.' : 'Express honest, constructive customer feedback.')}
-- Keep it concise (2-4 sentences).
-- Output ONLY the review text itself, with no introductory or concluding pleasantries.`;
+
+CORE HUMAN REVIEW PRINCIPLES:
+1. SOUND 100% HUMAN & ULTRA-PERSONAL: Write in the natural first-person voice ("I visited...", "I came in for..."). Make it sound like a real person who walked into the shop, not marketing copy or an AI assistant.
+2. ZERO ROBOTIC CLICHÉS: Never use marketing buzzwords like "testament to", "nestled in", "seamless blend", "look no further", "delve", "epitome of", or corporate PR jargon.
+3. CONTEXT & PERSONALITY: Mention the specific service availed or product experienced whenever provided.
+4. REPUTATION SHIELD ON LOW RATINGS: If the customer selected low stars (1-3) or expressed grievances in chips or notes, rephrase them with empathy, politeness, and constructive suggestions. Protect the business from harmful negative phrasing while addressing the user's core concern gracefully.
+5. CONCISE & READY TO POST: Write 2 to 4 punchy, natural sentences. Output ONLY the raw review text itself — no introductory chatter, no quotation marks, no emojis unless natural, and no hashtags.
+${isBengali ? `6. BENGALI LANGUAGE SPECIAL GUIDELINE: Write in natural, modern conversational Bengali (চলিত কথ্য ভাষা) that customers in West Bengal & Bangladesh actually write on Google Maps. Use warm, natural words (যেমন: "খুবই ভালো অভিজ্ঞতা", "ব্যবহার দারুণ অমায়িক", "কাজের মান চমৎকার", "সঠিক সময়ে কাজ পেয়েছি", "সবাইকে সাজেস্ট করব")। যান্ত্রিক বা কাঠখোট্টা অনুবাদ সম্পূর্ণ এড়িয়ে চলুন। খারাপ ফিডব্যাকের ক্ষেত্রেও ভাষা মার্জিত ও ইতিবাচক রাখুন (যেমন: "স্টাফদের ব্যবহার ভালো, তবে কাজের ডেলিভারিতে আর একটু দ্রুত হলে সুবিধা হতো")।` : ''}
+${isHindi ? `6. HINDI LANGUAGE SPECIAL GUIDELINE: Write in natural everyday conversational Hindi (सरल बोलचाल की भाषा) that local customers write on Google Maps. Keep it respectful, genuine, and warm.` : ''}`;
 
   const activeServices = (options.selectedServices && options.selectedServices.length > 0)
     ? options.selectedServices.join(', ')
@@ -292,22 +330,26 @@ Rules:
 
   const prompt = `${ratingPromptGuide}
 
-KEY CONTEXT & DETAILS:
-${activeServices ? `- Services or Products Experienced: "${activeServices}" (Mention these exact services naturally)` : ''}
-${options.shopAiDetails?.trim() ? `- Business Specialty & Shop Details: "${options.shopAiDetails.trim()}"` : ''}
-${options.customerExperience?.trim() ? `- Atmosphere & Experience: "${options.customerExperience.trim()}"` : ''}
+BUSINESS DETAILS:
+- Business Name: "${options.businessName}"
+- Category: "${options.category}"
+${activeServices ? `- Service/Product Experienced by Customer: "${activeServices}" (Naturally mention this service in first person)` : ''}
+${options.shopAiDetails?.trim() ? `- Business Specialties & Unique Qualities: "${options.shopAiDetails.trim()}"` : ''}
+${options.customerExperience?.trim() ? `- Atmosphere & Customer Care: "${options.customerExperience.trim()}"` : ''}
 
-${isPositive ? 'HIGHLIGHTS THE CUSTOMER LIKED:' : isNeutral ? 'KEY FEEDBACK & OBSERVATIONS:' : 'SPECIFIC ISSUES & GRIEVANCES FACED:'}
-${options.highlightChips.length > 0 ? options.highlightChips.map((c) => `- ${c}`).join('\n') : isNegative ? '- Poor service and unsatisfactory experience' : '- Good service'}
-${options.customNotes?.trim() ? `\nCUSTOMER'S PERSONAL NOTES (Incorporate these points directly): "${options.customNotes.trim()}"` : ''}
+CUSTOMER EXPERIENCE DETAILS:
+${isPositive ? 'POSITIVE HIGHLIGHTS EXPERIENCED:' : 'CUSTOMER OBSERVATIONS & FEEDBACK AREAS:'}
+${options.highlightChips.length > 0 ? options.highlightChips.map((c) => `- ${c}`).join('\n') : isPositive ? '- Great service and courteous staff' : '- Waiting time or service coordination'}
+${options.customNotes?.trim() ? `\nCUSTOMER'S DIRECT NOTES (Polish and reframe politely if negative; remove any rude or angry language): "${options.customNotes.trim()}"` : ''}
 
-${options.reviewWritingRules?.trim() && isPositive ? `BUSINESS OWNER'S SPECIFIC WRITING RULES:
+${options.reviewWritingRules?.trim() && isPositive ? `OWNER'S PREFERRED WRITING GUIDELINES:
 ${options.reviewWritingRules.trim()}
 ` : ''}
-Review Tone: ${isNegative ? 'disappointed, critical, and dissatisfied' : isNeutral ? 'balanced and constructive' : options.brandTone || 'friendly and authentic'}
-Language required: ${lang}.
 
-Write a natural, conversational 2-4 sentence Google review now:`;
+REQUIRED TONE: ${isNegative ? 'Polite, respectful, constructive, and dignified (zero harsh or damaging words)' : isNeutral ? 'Balanced, fair, and constructive' : options.brandTone || 'Warm, authentic, appreciative, and enthusiastic'}
+LANGUAGE: ${lang}
+
+Write a natural, conversational 2-4 sentence Google Maps review now:`;
 
   // Dynamically resolve the best active, low-cost model for this account
   const bestModel = await resolveBestModel(ai);
@@ -321,7 +363,7 @@ Write a natural, conversational 2-4 sentence Google review now:`;
         contents: prompt,
         config: {
           systemInstruction,
-          temperature: 0.85,
+          temperature: 0.8,
         },
       });
 
@@ -344,6 +386,23 @@ Write a natural, conversational 2-4 sentence Google review now:`;
       }
       // For temporary model overload (high demand, 503, 404, rate limit), continue to next fallback model
       continue;
+    }
+  }
+
+  // If models temporarily hit limits but key is authentic, return the high-quality smart fallback
+  if (lastError) {
+    const msg = (lastError?.message || '').toLowerCase();
+    if (
+      msg.includes('high demand') ||
+      msg.includes('spikes in demand') ||
+      msg.includes('503') ||
+      msg.includes('unavailable') ||
+      msg.includes('overloaded') ||
+      msg.includes('quota') ||
+      msg.includes('resource_exhausted') ||
+      msg.includes('429')
+    ) {
+      return getSmartFallbackReview(options);
     }
   }
 
