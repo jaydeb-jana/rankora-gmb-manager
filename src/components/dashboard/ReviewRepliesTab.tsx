@@ -95,6 +95,21 @@ export function ReviewRepliesTab({
           name: l.name.replace(/\s*\([^)]*\)/g, '').trim(),
           percentage: Number(l.percentage) || 0,
         }));
+        // If it was the legacy default with Hindi (70/30), reset to English only (100%)
+        const isLegacyDualDefault =
+          sanitized.length === 2 &&
+          sanitized[0].code === 'en' &&
+          sanitized[1].code === 'hi' &&
+          sanitized[0].percentage === 70 &&
+          sanitized[1].percentage === 30;
+
+        if (isLegacyDualDefault) {
+          sanitized = [{ code: 'en', name: 'English', percentage: 100 }];
+          api.updateBusinessSettings({
+            languagePreferences: sanitized,
+          });
+        }
+
         if (sanitized.length === 1) {
           sanitized[0].percentage = 100;
         } else if (sanitized.length === 2) {
@@ -106,8 +121,7 @@ export function ReviewRepliesTab({
         setLanguages(sanitized);
       } else {
         setLanguages([
-          { code: 'en', name: 'English', percentage: 70 },
-          { code: 'hi', name: 'Hindi', percentage: 30 },
+          { code: 'en', name: 'English', percentage: 100 },
         ]);
       }
     }

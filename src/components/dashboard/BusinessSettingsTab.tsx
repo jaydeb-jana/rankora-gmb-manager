@@ -15,9 +15,6 @@ import {
   ExternalLink,
   ShieldCheck,
   MapPin,
-  Layers,
-  Plus,
-  X,
 } from 'lucide-react';
 import { BusinessSettings } from '../../types';
 import { api } from '../../lib/api';
@@ -67,25 +64,6 @@ export function BusinessSettingsTab({
 
   const [googleReviewUrl, setGoogleReviewUrl] = useState(initialReviewUrl);
 
-  // 4. Services & Offerings (Shown on Public Review Page)
-  const [services, setServices] = useState<string[]>(settings?.services || ['In-store Shopping', 'Customer Care']);
-  const [newServiceInput, setNewServiceInput] = useState('');
-
-  const handleAddService = (serviceToAdd?: string) => {
-    const trimmed = (serviceToAdd || newServiceInput).trim();
-    if (!trimmed) return;
-    if (services.some((s) => s.toLowerCase() === trimmed.toLowerCase())) {
-      showError('This service is already added.');
-      return;
-    }
-    setServices((prev) => [...prev, trimmed]);
-    setNewServiceInput('');
-  };
-
-  const handleRemoveService = (serviceToRemove: string) => {
-    setServices((prev) => prev.filter((s) => s !== serviceToRemove));
-  };
-
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Synchronize local form inputs when settings prop updates
@@ -103,9 +81,6 @@ export function BusinessSettingsTab({
             ? ''
             : settings.googleReviewUrl || '';
         setGoogleReviewUrl(cleanUrl);
-      }
-      if (settings.services !== undefined && Array.isArray(settings.services)) {
-        setServices(settings.services);
       }
     }
   }, [settings, user?.email]);
@@ -259,8 +234,6 @@ export function BusinessSettingsTab({
         fullName: ownerFullName.trim(),
         mobileNumber: mobileNumber.trim(),
         googleReviewUrl: googleReviewUrl.trim(),
-        services: services,
-        productsAndServices: services.join(', '),
       });
 
       if (res.error) {
@@ -422,111 +395,6 @@ export function BusinessSettingsTab({
         </div>
       </div>
 
-
-      {/* SECTION: BUSINESS SERVICES & OFFERINGS (SHOWN ON PUBLIC REVIEW PAGE) */}
-      <div className="bg-white border border-[#dadce0] rounded-2xl p-6 sm:p-8 shadow-xs space-y-5">
-        <div className="border-b border-[#f1f3f4] pb-4 flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#e8f0fe] text-[#1a73e8] flex items-center justify-center shrink-0 shadow-2xs">
-              <Layers className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-bold text-base sm:text-lg text-[#202124] tracking-tight">
-                  Business Services & Offerings
-                </h3>
-                <span className="text-[11px] font-semibold bg-[#e8f0fe] text-[#1a73e8] px-2.5 py-0.5 rounded-full border border-[#d2e3fc]">
-                  Shown on Review Page
-                </span>
-              </div>
-              <p className="text-xs text-[#5f6368]">
-                Add your services, products, or departments. Customers will see and tap them on your review link.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Add Service Input */}
-        <div className="space-y-3">
-          <label className="block text-xs font-semibold text-[#202124]">
-            Add New Service / Product / Department
-          </label>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={newServiceInput}
-              onChange={(e) => setNewServiceInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleAddService();
-                }
-              }}
-              placeholder="e.g., In-store Shopping, Home Delivery, Bridal Wear, Custom Tailoring..."
-              className="flex-1 px-4 py-2.5 bg-white border border-[#dadce0] rounded-xl text-sm text-[#202124] focus:outline-none focus:border-[#1a73e8] focus:ring-2 focus:ring-[#1a73e8]/20 transition-all shadow-2xs"
-            />
-            <button
-              type="button"
-              onClick={() => handleAddService()}
-              className="px-5 py-2.5 bg-[#1a73e8] hover:bg-[#1557b0] text-white text-xs sm:text-sm font-semibold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs shrink-0"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Service</span>
-            </button>
-          </div>
-
-          {/* Quick Suggestions */}
-          <div className="flex items-center gap-1.5 flex-wrap pt-1 text-xs text-[#5f6368]">
-            <span className="text-[11px] font-semibold text-[#202124]">Quick Add:</span>
-            {['In-store Shopping', 'Home Delivery', 'Takeaway', 'Dine-in', 'Custom Tailoring', 'Bridal Collection', 'Quality Consultation', 'Repair Service'].map((sug) => (
-              <button
-                type="button"
-                key={sug}
-                onClick={() => handleAddService(sug)}
-                disabled={services.includes(sug)}
-                className={`px-2.5 py-1 rounded-lg text-[11px] transition-colors border ${
-                  services.includes(sug)
-                    ? 'opacity-40 bg-[#f1f3f4] text-[#80868b] border-[#dadce0] cursor-not-allowed'
-                    : 'bg-[#f8f9fa] hover:bg-[#e8f0fe] text-[#1a73e8] border-[#dadce0] hover:border-[#1a73e8] cursor-pointer'
-                }`}
-              >
-                + {sug}
-              </button>
-            ))}
-          </div>
-
-          {/* Active Services List */}
-          <div className="pt-2">
-            <label className="block text-xs font-semibold text-[#202124] mb-2">
-              Active Services ({services.length})
-            </label>
-            {services.length === 0 ? (
-              <div className="p-4 bg-[#f8f9fa] border border-dashed border-[#dadce0] rounded-xl text-center text-xs text-[#5f6368]">
-                No services added yet. Add a service above or click a Quick Add suggestion.
-              </div>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {services.map((service) => (
-                  <span
-                    key={service}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-[#e8f0fe] text-[#1a73e8] border border-[#d2e3fc] shadow-2xs"
-                  >
-                    <span>{service}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveService(service)}
-                      className="text-[#1a73e8] hover:text-[#d93025] hover:bg-white rounded-full p-0.5 transition-colors cursor-pointer"
-                      title={`Remove ${service}`}
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
 
       {/* SECTION 2: OWNER ACCOUNT DETAILS */}
       <div className="bg-white border border-[#dadce0] rounded-2xl p-6 sm:p-8 shadow-xs space-y-5">

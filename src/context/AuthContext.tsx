@@ -9,7 +9,7 @@ interface AuthContextValue {
   isLoading: boolean;
   impersonatorAdmin: CustomerUser | null;
   login: (token: string, user: CustomerUser) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   impersonateUser: (targetUser: CustomerUser) => Promise<void>;
   stopImpersonation: () => Promise<void>;
@@ -62,6 +62,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Listen for Supabase email confirmation link or session changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_OUT') {
+        localStorage.removeItem('rankora_token');
+        localStorage.removeItem('reputepulse_token');
+        localStorage.removeItem('rankora_impersonator_admin');
+        localStorage.removeItem('rankora_current_user');
+        setToken(null);
+        setUser(null);
+        setImpersonatorAdmin(null);
+        return;
+      }
+
       if (session?.user && (event === 'SIGNED_IN' || event === 'USER_UPDATED')) {
         const u = session.user;
         const appUser: CustomerUser = {
@@ -81,7 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       subscription.unsubscribe();
     };
-  }, [token]);
+  }, []);
 
   const login = (newToken: string, newUser: CustomerUser) => {
     localStorage.setItem('rankora_token', newToken);
@@ -91,10 +102,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setImpersonatorAdmin(null);
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await api.logout();
+    } catch (e) {
+      console.warn('Logout note:', e);
+    }
     localStorage.removeItem('rankora_token');
     localStorage.removeItem('reputepulse_token');
     localStorage.removeItem('rankora_impersonator_admin');
+    localStorage.removeItem('rankora_current_user');
+
+    try {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith('sb-') || key.includes('auth-token') || key.startsWith('supabase.auth'))) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach((k) => localStorage.removeItem(k));
+    } catch {}
+
     setToken(null);
     setUser(null);
     setImpersonatorAdmin(null);

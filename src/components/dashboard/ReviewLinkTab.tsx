@@ -13,6 +13,9 @@ import {
   X,
   SlidersHorizontal,
   Eye,
+  Link2Off,
+  Info,
+  ArrowRight,
 } from 'lucide-react';
 import { BusinessSettings } from '../../types';
 import { api } from '../../lib/api';
@@ -26,6 +29,8 @@ interface ReviewLinkTabProps {
   settings: BusinessSettings;
   onOpenPublicPage: () => void;
   onUpdateSlug: (newSlug: string) => void;
+  onNavigateToSettings?: () => void;
+  onUpdateSettings?: (newSettings: BusinessSettings) => void;
 }
 
 export type StandLayoutType =
@@ -246,9 +251,71 @@ function checkIsLightColor(hex: string): boolean {
 export function ReviewLinkTab({
   settings,
   onOpenPublicPage,
+  onUpdateSlug,
+  onNavigateToSettings,
+  onUpdateSettings,
 }: ReviewLinkTabProps) {
   const { showSuccess, showError } = useToast();
   const [copied, setCopied] = useState(false);
+
+  const isMockUrl = (url?: string) =>
+    Boolean(
+      url &&
+        (url.includes('ChIJQ6v9a_d-lDkR4Vq7hC8k97s') ||
+          url.includes('ChIJQ6v9a_d-IDkR4Vq7hC8k97s') ||
+          url.includes('example.com') ||
+          url.includes('placeholder'))
+    );
+
+  const hasValidReviewUrl = Boolean(
+    settings?.googleReviewUrl &&
+      settings.googleReviewUrl.trim().length > 0 &&
+      !isMockUrl(settings.googleReviewUrl)
+  );
+
+  const [inputUrl, setInputUrl] = useState('');
+  const [savingUrl, setSavingUrl] = useState(false);
+
+  const handleSaveReviewUrl = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const trimmed = inputUrl.trim();
+    if (!trimmed) {
+      showError('Please enter your Google Review Submission URL.');
+      return;
+    }
+
+    let normalized = trimmed;
+    if (!normalized.startsWith('http://') && !normalized.startsWith('https://')) {
+      normalized = `https://${normalized}`;
+    }
+
+    try {
+      new URL(normalized);
+    } catch {
+      showError('Please enter a valid web URL (e.g., https://g.page/r/.../review)');
+      return;
+    }
+
+    setSavingUrl(true);
+    try {
+      const res = await api.updateBusinessSettings({
+        googleReviewUrl: normalized,
+      });
+
+      if (res.error) {
+        showError(res.error);
+      } else {
+        showSuccess('Google Review Submission URL linked successfully! QR Studio unlocked.');
+        if (res.settings && onUpdateSettings) {
+          onUpdateSettings(res.settings);
+        }
+      }
+    } catch {
+      showError('Failed to save Google Review Submission URL. Please try again.');
+    } finally {
+      setSavingUrl(false);
+    }
+  };
 
   // 1. Digital QR Code states (Independent, user customizable color)
   const [digitalQrDataUrl, setDigitalQrDataUrl] = useState<string>('');
@@ -286,6 +353,10 @@ export function ReviewLinkTab({
 
   // Fetch Digital QR Code (re-runs when digitalQrColor changes)
   useEffect(() => {
+    if (!hasValidReviewUrl) {
+      setLoadingDigitalQr(false);
+      return;
+    }
     let isMounted = true;
     setLoadingDigitalQr(true);
     api.getQrCode(fullReviewUrl, digitalQrColor)
@@ -310,13 +381,17 @@ export function ReviewLinkTab({
     return () => {
       isMounted = false;
     };
-  }, [fullReviewUrl, digitalQrColor]);
+  }, [fullReviewUrl, digitalQrColor, hasValidReviewUrl]);
 
   // Stand QR code color dynamically synchronizes with the selected template's matching theme color
   const standQrColor = selectedTemplate.qrColor || '#1a73e8';
 
   // Fetch Stand QR Code (dynamically matches the selected template's theme color)
   useEffect(() => {
+    if (!hasValidReviewUrl) {
+      setLoadingStandQr(false);
+      return;
+    }
     let isMounted = true;
     setLoadingStandQr(true);
     api.getQrCode(fullReviewUrl, standQrColor)
@@ -341,7 +416,7 @@ export function ReviewLinkTab({
     return () => {
       isMounted = false;
     };
-  }, [fullReviewUrl, standQrColor]);
+  }, [fullReviewUrl, standQrColor, hasValidReviewUrl]);
 
   // Close modal on Escape
   useEffect(() => {
@@ -423,6 +498,129 @@ export function ReviewLinkTab({
     const tmpl = STAND_TEMPLATES.find((t) => t.id === tmplId);
     showSuccess(`Selected "${tmpl?.name || 'Template'}" layout.`);
   };
+
+  if (!hasValidReviewUrl) {
+    return (
+      <div className="max-w-4xl mx-auto space-y-6 pb-16">
+        <div className="bg-white border border-[#dadce0] rounded-2xl p-6 sm:p-10 shadow-xs space-y-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 border-b border-[#f1f3f4] pb-6">
+            <div className="w-14 h-14 rounded-2xl bg-[#fef7e0] border border-[#feefc3] text-[#b06000] flex items-center justify-center shrink-0 shadow-2xs">
+              <Link2Off className="w-7 h-7 text-[#ea8600]" />
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-xl sm:text-2xl font-bold text-[#202124] tracking-tight">
+                  Google Review Submission URL Required
+                </h2>
+                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-[#fef7e0] text-[#b06000] border border-[#fce8b2]">
+                  Action Required
+                </span>
+              </div>
+              <p className="text-xs sm:text-sm text-[#5f6368]">
+                Please provide your official Google Review Submission URL first. This page, your review link, and QR stands cannot be generated without it.
+              </p>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-xl bg-[#f8f9fa] border border-[#dadce0] text-xs sm:text-sm text-[#3c4043] space-y-2">
+            <p className="font-semibold text-[#202124] flex items-center gap-2">
+              <Info className="w-4 h-4 text-[#1a73e8] shrink-0" />
+              <span>Why is this required before opening this page?</span>
+            </p>
+            <p className="text-xs text-[#5f6368] leading-relaxed">
+              When customers scan your QR counter stand or visit your review landing page, our Gemini AI drafts a genuine 5-star review and then redirects them directly to your Google Business Profile review window on Google Maps. Without this link, customers have nowhere to submit their reviews.
+            </p>
+          </div>
+
+          <form onSubmit={handleSaveReviewUrl} className="space-y-3 pt-1">
+            <label className="block text-xs font-bold text-[#202124] uppercase tracking-wider text-[11px] text-[#5f6368]">
+              Enter Your Google Review Submission URL:
+            </label>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#5f6368]">
+                  <LinkIcon className="w-4 h-4 text-[#1a73e8]" />
+                </div>
+                <input
+                  type="text"
+                  value={inputUrl}
+                  onChange={(e) => setInputUrl(e.target.value)}
+                  placeholder="https://g.page/r/.../review or https://search.google.com/local/writereview?placeid=..."
+                  className="w-full pl-10 pr-4 py-3 bg-white border border-[#dadce0] rounded-xl text-xs sm:text-sm text-[#202124] placeholder-[#80868b] focus:outline-none focus:border-[#1a73e8] focus:ring-2 focus:ring-[#1a73e8]/20 transition-all shadow-2xs font-mono"
+                  disabled={savingUrl}
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={savingUrl || !inputUrl.trim()}
+                className="px-6 py-3 bg-[#1a73e8] hover:bg-[#1557b0] disabled:bg-[#dadce0] disabled:text-[#80868b] disabled:cursor-not-allowed text-white text-xs sm:text-sm font-semibold rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-xs shrink-0"
+              >
+                {savingUrl ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Saving URL...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    <span>Save &amp; Unlock Page</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+
+          {onNavigateToSettings && (
+            <div className="pt-1 flex items-center justify-between flex-wrap gap-2 text-xs">
+              <span className="text-[#5f6368]">
+                Prefer to configure it from your business profile?
+              </span>
+              <button
+                type="button"
+                onClick={onNavigateToSettings}
+                className="font-semibold text-[#1a73e8] hover:text-[#1557b0] hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <span>Go to Business Profile Settings</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
+          <div className="border-t border-[#f1f3f4] pt-6 space-y-3">
+            <h3 className="font-bold text-[#202124] text-xs uppercase tracking-wider text-[#5f6368]">
+              How to find your official Google Review Link in 4 steps:
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              <div className="p-3.5 rounded-xl border border-[#dadce0] bg-[#f8f9fa] space-y-1">
+                <span className="font-bold text-[#1a73e8]">Step 1: Search Your Business</span>
+                <p className="text-[#5f6368]">
+                  Open Google Search or Google Maps and search for your business name.
+                </p>
+              </div>
+              <div className="p-3.5 rounded-xl border border-[#dadce0] bg-[#f8f9fa] space-y-1">
+                <span className="font-bold text-[#1a73e8]">Step 2: Ask for Reviews</span>
+                <p className="text-[#5f6368]">
+                  In your Google Business Profile panel, click the <strong>"Ask for reviews"</strong> button.
+                </p>
+              </div>
+              <div className="p-3.5 rounded-xl border border-[#dadce0] bg-[#f8f9fa] space-y-1">
+                <span className="font-bold text-[#1a73e8]">Step 3: Copy Short Link</span>
+                <p className="text-[#5f6368]">
+                  Copy the review URL provided by Google (e.g., <code>https://g.page/r/.../review</code>).
+                </p>
+              </div>
+              <div className="p-3.5 rounded-xl border border-[#dadce0] bg-[#f8f9fa] space-y-1">
+                <span className="font-bold text-[#1a73e8]">Step 4: Paste &amp; Unlock</span>
+                <p className="text-[#5f6368]">
+                  Paste the link into the box above and click <strong>"Save &amp; Unlock Page"</strong>.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-16">

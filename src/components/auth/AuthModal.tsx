@@ -39,9 +39,9 @@ export function AuthModal({ initialMode = 'login', onSuccess }: AuthModalProps) 
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
 
+  const OTP_LENGTH = 8;
   const [otpCode, setOtpCode] = useState('');
-  const [otpLength, setOtpLength] = useState<number>(8);
-  const [digits, setDigits] = useState<string[]>(Array(8).fill(''));
+  const [digits, setDigits] = useState<string[]>(Array(OTP_LENGTH).fill(''));
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const [otpPurpose, setOtpPurpose] = useState<'registration' | 'password_reset'>('registration');
@@ -53,9 +53,9 @@ export function AuthModal({ initialMode = 'login', onSuccess }: AuthModalProps) 
 
   // Keep otpCode synced with digits
   useEffect(() => {
-    const full = digits.slice(0, otpLength).join('');
+    const full = digits.slice(0, OTP_LENGTH).join('');
     setOtpCode(full);
-  }, [digits, otpLength]);
+  }, [digits]);
 
   // Auto-focus first digit field when OTP verification appears
   useEffect(() => {
@@ -66,45 +66,22 @@ export function AuthModal({ initialMode = 'login', onSuccess }: AuthModalProps) 
     }
   }, [mode]);
 
-  const handleSwitchLength = (len: number) => {
-    setOtpLength(len);
-    setDigits((prev) => {
-      const next = Array(len).fill('');
-      for (let i = 0; i < len; i++) {
-        next[i] = prev[i] || '';
-      }
-      return next;
-    });
-    setErrorMessage('');
-    setTimeout(() => {
-      inputRefs.current[0]?.focus();
-    }, 50);
-  };
-
   const applyDigitsString = (str: string, startIndex = 0) => {
     const clean = str.replace(/\D/g, '');
     if (!clean) return;
 
-    let targetLen = otpLength;
-    if (startIndex === 0) {
-      if (clean.length === 6) targetLen = 6;
-      else if (clean.length === 7) targetLen = 7;
-      else if (clean.length >= 8) targetLen = 8;
-      setOtpLength(targetLen);
-    }
-
-    const nextDigits = Array(targetLen).fill('');
-    for (let i = 0; i < targetLen; i++) {
-      if (i >= startIndex && i - startIndex < clean.length) {
-        nextDigits[i] = clean[i - startIndex];
-      } else if (i < startIndex) {
-        nextDigits[i] = digits[i] || '';
+    setDigits((prev) => {
+      const next = [...prev];
+      for (let i = 0; i < OTP_LENGTH; i++) {
+        if (i >= startIndex && i - startIndex < clean.length) {
+          next[i] = clean[i - startIndex];
+        }
       }
-    }
-    setDigits(nextDigits);
+      return next;
+    });
     setErrorMessage('');
 
-    const nextIndex = Math.min(startIndex + clean.length, targetLen - 1);
+    const nextIndex = Math.min(startIndex + clean.length, OTP_LENGTH - 1);
     setTimeout(() => {
       inputRefs.current[nextIndex]?.focus();
     }, 40);
@@ -134,7 +111,7 @@ export function AuthModal({ initialMode = 'login', onSuccess }: AuthModalProps) 
     });
     setErrorMessage('');
 
-    if (index < otpLength - 1 && char) {
+    if (index < OTP_LENGTH - 1 && char) {
       inputRefs.current[index + 1]?.focus();
     }
   };
@@ -146,7 +123,7 @@ export function AuthModal({ initialMode = 'login', onSuccess }: AuthModalProps) 
       }
     } else if (e.key === 'ArrowLeft' && index > 0) {
       inputRefs.current[index - 1]?.focus();
-    } else if (e.key === 'ArrowRight' && index < otpLength - 1) {
+    } else if (e.key === 'ArrowRight' && index < OTP_LENGTH - 1) {
       inputRefs.current[index + 1]?.focus();
     }
   };
@@ -261,8 +238,8 @@ export function AuthModal({ initialMode = 'login', onSuccess }: AuthModalProps) 
     setErrorMessage('');
 
     const code = otpCode.trim();
-    if (!code || code.length < 6 || code.length > 8) {
-      setErrorMessage(`Please enter the complete ${otpLength}-digit verification code.`);
+    if (!code || code.length !== OTP_LENGTH) {
+      setErrorMessage(`Please enter the complete ${OTP_LENGTH}-digit verification code.`);
       return;
     }
 
@@ -381,7 +358,9 @@ export function AuthModal({ initialMode = 'login', onSuccess }: AuthModalProps) 
   };
 
   return (
-    <div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-sm border border-[#dadce0] p-6 sm:p-8">
+    <div className="w-full max-w-md mx-auto bg-white/95 backdrop-blur-xl rounded-3xl shadow-[0_20px_50px_rgba(26,115,232,0.12)] border border-gray-200/90 p-7 sm:p-9 relative overflow-hidden">
+      {/* Decorative Top Accent Line */}
+      <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[#1a73e8] via-[#4285f4] to-[#34a853]" />
       {/* Brand Header */}
       <div className="text-center mb-6">
         {/* Google Store Canopy Icon */}
@@ -492,7 +471,7 @@ export function AuthModal({ initialMode = 'login', onSuccess }: AuthModalProps) 
           <button
             type="submit"
             disabled={loading}
-            className="w-full mt-2 py-2.5 px-4 bg-[#1a73e8] hover:bg-[#1557b0] active:bg-[#174ea6] disabled:opacity-50 text-white rounded-lg font-semibold text-sm shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
+            className="w-full mt-2 py-3 px-4 bg-gradient-to-r from-[#1a73e8] to-[#1557b0] hover:from-[#1557b0] hover:to-[#0d47a1] active:scale-[0.99] disabled:opacity-60 text-white rounded-xl font-bold text-sm shadow-md hover:shadow-lg flex items-center justify-center gap-2 transition-all cursor-pointer"
           >
             {loading ? (
               <RefreshCw className="w-4 h-4 animate-spin" />
@@ -504,22 +483,7 @@ export function AuthModal({ initialMode = 'login', onSuccess }: AuthModalProps) 
             )}
           </button>
 
-          {/* Quick Admin Credentials Helper Button */}
-          <div className="pt-2 text-center">
-            <button
-              type="button"
-              onClick={() => {
-                setEmail('info@arventaventures.online');
-                setPassword('Jaydeb@123');
-              }}
-              className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#1a73e8] hover:text-[#1557b0] hover:underline cursor-pointer bg-[#e8f0fe] px-2.5 py-1 rounded-full border border-[#d2e3fc]"
-            >
-              <Crown className="w-3 h-3 text-[#fbbc04]" />
-              <span>Fill Super Admin Credentials</span>
-            </button>
-          </div>
-
-          <div className="text-center pt-3 border-t border-[#dadce0] text-xs text-[#5f6368]">
+          <div className="text-center pt-3.5 border-t border-gray-100 text-xs text-[#5f6368]">
             Don't have an account?{' '}
             <button
               type="button"
@@ -527,10 +491,15 @@ export function AuthModal({ initialMode = 'login', onSuccess }: AuthModalProps) 
                 setErrorMessage('');
                 setMode('register');
               }}
-              className="text-[#1a73e8] font-semibold hover:text-[#1557b0] hover:underline cursor-pointer"
+              className="text-[#1a73e8] font-bold hover:underline cursor-pointer ml-1"
             >
               Create account
             </button>
+          </div>
+
+          <div className="pt-2 flex items-center justify-center gap-1.5 text-[11px] text-gray-400 font-medium">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Official Google OAuth &bull; 256-Bit SSL Encrypted</span>
           </div>
         </form>
       )}
@@ -659,7 +628,7 @@ export function AuthModal({ initialMode = 'login', onSuccess }: AuthModalProps) 
           <button
             type="submit"
             disabled={loading}
-            className="w-full mt-2 py-2.5 px-4 bg-[#1a73e8] hover:bg-[#1557b0] active:bg-[#174ea6] disabled:opacity-50 text-white rounded-lg font-semibold text-sm shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
+            className="w-full mt-2 py-3 px-4 bg-gradient-to-r from-[#1a73e8] to-[#1557b0] hover:from-[#1557b0] hover:to-[#0d47a1] active:scale-[0.99] disabled:opacity-60 text-white rounded-xl font-bold text-sm shadow-md hover:shadow-lg flex items-center justify-center gap-2 transition-all cursor-pointer"
           >
             {loading ? (
               <RefreshCw className="w-4 h-4 animate-spin" />
@@ -671,7 +640,7 @@ export function AuthModal({ initialMode = 'login', onSuccess }: AuthModalProps) 
             )}
           </button>
 
-          <div className="text-center pt-2.5 border-t border-[#dadce0] text-xs text-[#5f6368]">
+          <div className="text-center pt-3 border-t border-gray-100 text-xs text-[#5f6368]">
             Already have an account?{' '}
             <button
               type="button"
@@ -679,7 +648,7 @@ export function AuthModal({ initialMode = 'login', onSuccess }: AuthModalProps) 
                 setErrorMessage('');
                 setMode('login');
               }}
-              className="text-[#1a73e8] font-semibold hover:text-[#1557b0] hover:underline cursor-pointer"
+              className="text-[#1a73e8] font-bold hover:underline cursor-pointer ml-1"
             >
               Sign in
             </button>
@@ -700,50 +669,16 @@ export function AuthModal({ initialMode = 'login', onSuccess }: AuthModalProps) 
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="text-xs font-semibold text-[#5f6368]">
-                Enter {otpLength}-digit verification code:
+                Enter 8-digit verification code:
               </label>
-
-              {/* Digit count switcher tabs */}
-              <div className="inline-flex items-center p-0.5 bg-[#f1f3f4] rounded-lg text-[11px] font-medium border border-[#dadce0]/60">
-                <button
-                  type="button"
-                  onClick={() => handleSwitchLength(8)}
-                  className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
-                    otpLength === 8
-                      ? 'bg-white text-[#1a73e8] font-bold shadow-2xs'
-                      : 'text-[#5f6368] hover:text-[#202124]'
-                  }`}
-                >
-                  8 Digits
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSwitchLength(7)}
-                  className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
-                    otpLength === 7
-                      ? 'bg-white text-[#1a73e8] font-bold shadow-2xs'
-                      : 'text-[#5f6368] hover:text-[#202124]'
-                  }`}
-                >
-                  7 Digits
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSwitchLength(6)}
-                  className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
-                    otpLength === 6
-                      ? 'bg-white text-[#1a73e8] font-bold shadow-2xs'
-                      : 'text-[#5f6368] hover:text-[#202124]'
-                  }`}
-                >
-                  6 Digits
-                </button>
-              </div>
+              <span className="text-[11px] font-semibold text-[#1a73e8] bg-[#e8f0fe] px-2.5 py-0.5 rounded-md border border-[#d2e3fc]">
+                8 Digits
+              </span>
             </div>
 
-            {/* Individual Digit Fields (Boxes) */}
+            {/* Individual Digit Fields (Strictly 8 Boxes) */}
             <div className="flex items-center justify-center gap-1 sm:gap-1.5 my-3">
-              {Array.from({ length: otpLength }).map((_, idx) => (
+              {Array.from({ length: OTP_LENGTH }).map((_, idx) => (
                 <input
                   key={idx}
                   ref={(el) => {
@@ -762,7 +697,7 @@ export function AuthModal({ initialMode = 'login', onSuccess }: AuthModalProps) 
                     const text = e.clipboardData.getData('text');
                     applyDigitsString(text, idx);
                   }}
-                  className={`w-8 h-11 sm:w-10 sm:h-12 text-center text-lg sm:text-xl font-mono font-bold rounded-xl border-2 transition-all outline-none ${
+                  className={`w-7.5 h-11 sm:w-10 sm:h-12 text-center text-lg sm:text-xl font-mono font-bold rounded-xl border-2 transition-all outline-none ${
                     digits[idx]
                       ? 'border-[#1a73e8] bg-white text-[#202124] shadow-2xs'
                       : 'border-[#dadce0] bg-[#f8f9fa] text-[#202124] focus:border-[#1a73e8] focus:bg-white focus:ring-4 focus:ring-[#1a73e8]/15'
@@ -777,7 +712,7 @@ export function AuthModal({ initialMode = 'login', onSuccess }: AuthModalProps) 
                 <button
                   type="button"
                   onClick={() => {
-                    setDigits(Array(otpLength).fill(''));
+                    setDigits(Array(OTP_LENGTH).fill(''));
                     inputRefs.current[0]?.focus();
                   }}
                   className="text-xs text-[#d93025] hover:underline cursor-pointer"
@@ -790,7 +725,7 @@ export function AuthModal({ initialMode = 'login', onSuccess }: AuthModalProps) 
 
           <button
             type="submit"
-            disabled={loading || digits.slice(0, otpLength).join('').length !== otpLength}
+            disabled={loading || digits.join('').length !== OTP_LENGTH}
             className="w-full py-2.5 px-4 bg-[#1a73e8] hover:bg-[#1557b0] active:bg-[#174ea6] disabled:opacity-50 text-white rounded-lg font-semibold text-sm shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
           >
             {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'Confirm & Complete'}

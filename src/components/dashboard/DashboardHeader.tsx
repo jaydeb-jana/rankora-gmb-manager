@@ -71,25 +71,17 @@ export function DashboardHeader({
               }`}
               title={onNavigateToHome ? 'Go to Home & Overview' : undefined}
             >
-              {/* Google Business Profile canopy icon OR Custom Store Logo */}
-              <div className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-white border border-[#dadce0] shadow-2xs shrink-0 group-hover:border-[#1a73e8] transition-colors overflow-hidden">
-                {businessLogo ? (
-                  <img
-                    src={businessLogo}
-                    alt={businessName || 'Store Logo'}
-                    className="w-full h-full object-contain p-0.5"
-                  />
-                ) : (
-                  <svg className="w-5 h-5 sm:w-6 sm:h-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M4 10V19C4 19.5523 4.44772 20 5 20H19C19.5523 20 20 19.5523 20 19V10" stroke="#1A73E8" strokeWidth="2" strokeLinecap="round"/>
-                    <path d="M2 7L4.5 4H19.5L22 7L20 10H4L2 7Z" fill="#1A73E8"/>
-                    <path d="M7 10C7 11.1046 6.10457 12 5 12C3.89543 12 3 10" stroke="#EA4335" strokeWidth="2"/>
-                    <path d="M11 10C11 11.1046 10.1046 12 9 12C7.89543 12 7 10" stroke="#FBBC04" strokeWidth="2"/>
-                    <path d="M15 10C15 11.1046 14.1046 12 13 12C11.8954 12 11 10" stroke="#34A853" strokeWidth="2"/>
-                    <path d="M19 10C19 11.1046 18.1046 12 17 12C15.8954 12 15 10" stroke="#1A73E8" strokeWidth="2"/>
-                    <path d="M9 20V14H15V20" stroke="#1A73E8" strokeWidth="2"/>
-                  </svg>
-                )}
+              {/* Google Business Profile 4-color canopy icon */}
+              <div className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-white border border-[#dadce0] shadow-2xs shrink-0 group-hover:border-[#1a73e8] transition-colors">
+                <svg className="w-5 h-5 sm:w-6 sm:h-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M4 10V19C4 19.5523 4.44772 20 5 20H19C19.5523 20 20 19.5523 20 19V10" stroke="#1A73E8" strokeWidth="2" strokeLinecap="round"/>
+                  <path d="M2 7L4.5 4H19.5L22 7L20 10H4L2 7Z" fill="#1A73E8"/>
+                  <path d="M7 10C7 11.1046 6.10457 12 5 12C3.89543 12 3 10" stroke="#EA4335" strokeWidth="2"/>
+                  <path d="M11 10C11 11.1046 10.1046 12 9 12C7.89543 12 7 10" stroke="#FBBC04" strokeWidth="2"/>
+                  <path d="M15 10C15 11.1046 14.1046 12 13 12C11.8954 12 11 10" stroke="#34A853" strokeWidth="2"/>
+                  <path d="M19 10C19 11.1046 18.1046 12 17 12C15.8954 12 15 10" stroke="#1A73E8" strokeWidth="2"/>
+                  <path d="M9 20V14H15V20" stroke="#1A73E8" strokeWidth="2"/>
+                </svg>
               </div>
 
               <div className="min-w-0">
@@ -161,12 +153,14 @@ export function DashboardHeader({
               )}
 
               <button
+                type="button"
                 onClick={onLogout}
                 title="Sign out of account"
-                className="p-1.5 sm:p-2 text-[#5f6368] hover:text-[#d93025] hover:bg-[#f1f3f4] rounded-full transition-colors cursor-pointer shrink-0"
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold text-[#5f6368] hover:text-[#d93025] hover:bg-[#fce8e6]/60 rounded-xl transition-all cursor-pointer shrink-0 border border-transparent hover:border-[#f5c2c7]"
                 aria-label="Sign out"
               >
                 <LogOut className="w-4 h-4" />
+                <span className="hidden sm:inline">Logout</span>
               </button>
             </div>
           </div>

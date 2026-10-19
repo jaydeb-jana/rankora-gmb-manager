@@ -30,8 +30,10 @@ import {
 } from 'lucide-react';
 import { CustomerUser, PricingPlan } from '../../types';
 import { api } from '../../lib/api';
+import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
+import { TopProgressBar } from '../common/LoadingScreen';
 
 interface AdminDashboardProps {
   onUserImpersonated?: () => void;
@@ -97,33 +99,106 @@ export function AdminDashboard({ onUserImpersonated }: AdminDashboardProps = {})
   });
   const [newFeatureInput, setNewFeatureInput] = useState<string>('');
 
-  const loadUsers = async () => {
-    setLoadingUsers(true);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+
+  const loadUsers = async (showLoadingState = true) => {
+    if (showLoadingState) setLoadingUsers(true);
     try {
       const res = await api.getAllUsers();
       setUsers(res.users);
     } catch {
-      showError('Failed to load user records.');
+      if (showLoadingState) showError('Failed to load user records.');
     } finally {
-      setLoadingUsers(false);
+      if (showLoadingState) setLoadingUsers(false);
     }
   };
 
-  const loadPlans = async () => {
-    setLoadingPlans(true);
+  const loadPlans = async (showLoadingState = true) => {
+    if (showLoadingState) setLoadingPlans(true);
     try {
       const res = await api.getPricingPlans();
       setPlans(res);
     } catch {
-      showError('Failed to load pricing plans.');
+      if (showLoadingState) showError('Failed to load pricing plans.');
     } finally {
-      setLoadingPlans(false);
+      if (showLoadingState) setLoadingPlans(false);
     }
   };
 
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    await Promise.all([loadUsers(false), loadPlans(false)]);
+    setIsRefreshing(false);
+    showSuccess('Users & system data synchronized in real-time.');
+  };
+
   useEffect(() => {
-    loadUsers();
-    loadPlans();
+    loadUsers(true);
+    loadPlans(true);
+
+    // 1. Supabase Realtime Channel Subscription (Cross-device, cross-browser live sync)
+    const realtimeSub = supabase
+      .channel('rankora-realtime-admin')
+      .on('broadcast', { event: 'users_sync' }, () => {
+        loadUsers(false);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
+        loadUsers(false);
+      })
+      .subscribe();
+
+    // 2. BroadcastChannel Subscription (Multi-tab instantaneous sync)
+    let bc: BroadcastChannel | null = null;
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        bc = new BroadcastChannel('rankora_realtime_sync');
+        bc.onmessage = () => {
+          loadUsers(false);
+        };
+      }
+    } catch {}
+
+    // 3. Storage event listener (Cross-tab localStorage sync)
+    const handleStorage = (e: StorageEvent) => {
+      if (
+        e.key === 'rankora_supabase_users' ||
+        e.key === 'rankora_current_user' ||
+        e.key === 'rankora_supabase_settings'
+      ) {
+        loadUsers(false);
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+
+    // 4. Custom window sync event (Same-window event dispatch)
+    const handleCustomSync = () => {
+      loadUsers(false);
+    };
+    window.addEventListener('rankora_users_updated', handleCustomSync);
+
+    // 5. Window focus & visibility sync
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        loadUsers(false);
+      }
+    };
+    window.addEventListener('focus', handleVisibility);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    // 6. Realtime Polling Fallback (guarantees fresh data every 3.5 seconds)
+    const pollInterval = setInterval(() => {
+      loadUsers(false);
+    }, 3500);
+
+    return () => {
+      supabase.removeChannel(realtimeSub);
+      if (bc) bc.close();
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('rankora_users_updated', handleCustomSync);
+      window.removeEventListener('focus', handleVisibility);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      clearInterval(pollInterval);
+    };
   }, []);
 
   // Filtered users
@@ -481,25 +556,46 @@ export function AdminDashboard({ onUserImpersonated }: AdminDashboardProps = {})
                   </button>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setUserFormData({
-                      fullName: '',
-                      email: '',
-                      mobileNumber: '',
-                      businessName: '',
-                      password: '',
-                      planId: 'pro-plan',
-                      status: 'active',
-                    });
-                    setIsAddUserModalOpen(true);
-                  }}
-                  className="px-4 py-2 bg-[#1a73e8] hover:bg-[#1557b0] text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Add New User</span>
-                </button>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-[#e6f4ea] text-[#137333] border border-[#ceead6] text-[11px] font-bold shadow-2xs">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#137333] opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-[#137333]"></span>
+                    </span>
+                    <span>Live Real-Time Sync</span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleManualRefresh}
+                    disabled={isRefreshing}
+                    title="Synchronize user records immediately"
+                    className="px-3 py-1.5 bg-white hover:bg-[#f1f3f4] text-[#3c4043] rounded-xl text-xs font-bold transition-all border border-[#dadce0] flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-[#1a73e8]' : ''}`} />
+                    <span>Sync Now</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUserFormData({
+                        fullName: '',
+                        email: '',
+                        mobileNumber: '',
+                        businessName: '',
+                        password: '',
+                        planId: 'pro-plan',
+                        status: 'active',
+                      });
+                      setIsAddUserModalOpen(true);
+                    }}
+                    className="px-4 py-2 bg-[#1a73e8] hover:bg-[#1557b0] text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Add New User</span>
+                  </button>
+                </div>
               </div>
             </div>
 

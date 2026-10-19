@@ -54,6 +54,10 @@ export const api = {
     return supabaseService.login(data);
   },
 
+  async logout(): Promise<{ success: boolean }> {
+    return supabaseService.logout();
+  },
+
   async forgotPassword(email: string) {
     return supabaseService.forgotPassword(email);
   },
@@ -306,9 +310,9 @@ export const api = {
         services: biz?.services,
         selectedServices: data.selectedServices,
         customNotes: data.customNotes,
-        shopAiDetails: biz?.shopAiDetails,
-        reviewWritingRules: biz?.reviewWritingRules,
-        customerExperience: biz?.customerExperience,
+        shopAiDetails: biz?.shopAiDetails || biz?.customerExperience,
+        reviewWritingRules: biz?.reviewWritingRules || biz?.reviewStyleAndRules,
+        customerExperience: biz?.customerExperience || biz?.shopAiDetails,
         brandTone: biz?.brandTone,
         starRating: data.starRating,
         highlightChips: data.highlightChips,
@@ -397,5 +401,9 @@ export const api = {
 
   async resetPricingPlans(): Promise<{ success: boolean; plans: PricingPlan[] }> {
     return supabaseService.resetPricingPlans();
+  },
+
+  async activateUserPlan(planId: string, promoCode?: string): Promise<{ success: boolean; user?: CustomerUser; error?: string; message?: string }> {
+    return supabaseService.activateUserPlan(planId, promoCode);
   },
 };

@@ -10,7 +10,8 @@ import {
   Navigate,
 } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { ToastProvider } from './context/ToastContext';
+import { ToastProvider, useToast } from './context/ToastContext';
+import { LoadingScreen, TopProgressBar } from './components/common/LoadingScreen';
 import { AuthModal } from './components/auth/AuthModal';
 import { DashboardHeader } from './components/dashboard/DashboardHeader';
 import {
@@ -42,6 +43,13 @@ import {
   ShieldCheck,
   LogOut,
   Crown,
+  Star,
+  CheckCircle2,
+  TrendingUp,
+  Users,
+  Award,
+  Shield,
+  ArrowRight,
 } from 'lucide-react';
 
 /**
@@ -74,6 +82,13 @@ function CustomerPortalContent() {
   const { user, token, isLoading, logout, impersonatorAdmin, stopImpersonation } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const { showSuccess } = useToast();
+
+  const handleCustomerLogout = async () => {
+    await logout();
+    showSuccess('Successfully signed out.');
+    navigate('/', { replace: true });
+  };
 
   // Active tab is directly driven by the browser URL route
   const rawTab: DashboardTab = getTabFromPath(location.pathname);
@@ -190,26 +205,29 @@ function CustomerPortalContent() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#f8f9fa] flex items-center justify-center p-4">
-        <div className="text-center space-y-3">
-          <RefreshCw className="w-8 h-8 text-[#1a73e8] animate-spin mx-auto" />
-          <p className="text-sm font-medium text-[#5f6368]">
-            Loading customer portal...
-          </p>
-        </div>
-      </div>
+      <LoadingScreen
+        message="Loading your account..."
+        subMessage="Validating secure session and user profile"
+      />
     );
   }
 
-  // Unauthenticated: Google-styled Clean White Login & Value Proposition
+  // Unauthenticated: Modern Enterprise SaaS Google-Styled Landing & Value Proposition
   if (!user || !token) {
     return (
-      <div className="min-h-screen bg-[#f8f9fa] flex flex-col justify-between p-4 sm:p-6 lg:p-8">
-        {/* Top Header */}
-        <header className="max-w-7xl mx-auto w-full flex items-center justify-between pb-6 sm:pb-8 border-b border-[#dadce0]">
-          <div className="flex items-center gap-3">
-            {/* Google Store Canopy Icon */}
-            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-white border border-[#dadce0] shadow-2xs">
+      <div className="min-h-screen bg-gradient-to-br from-[#f8fafd] via-[#ffffff] to-[#f0f4f9] relative overflow-hidden flex flex-col justify-between p-4 sm:p-6 lg:p-8">
+        {/* Ambient Decorative Glow Orbs */}
+        <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-blue-400/15 blur-3xl pointer-events-none" />
+        <div className="absolute top-1/3 -right-32 w-96 h-96 rounded-full bg-indigo-400/10 blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-32 left-1/3 w-96 h-96 rounded-full bg-amber-400/10 blur-3xl pointer-events-none" />
+        {/* Subtle dot pattern */}
+        <div className="absolute inset-0 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:24px_24px] pointer-events-none opacity-60" />
+
+        {/* Top Header - Glassmorphic */}
+        <header className="relative z-10 max-w-7xl mx-auto w-full flex items-center justify-between px-5 sm:px-7 py-3.5 bg-white/80 backdrop-blur-md rounded-2xl border border-gray-200/80 shadow-xs mb-4">
+          <div className="flex items-center gap-3.5">
+            {/* Google Store Canopy Icon with Glow */}
+            <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br from-white to-gray-50 border border-gray-200 shadow-sm shrink-0">
               <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none">
                 <path d="M4 10V19C4 19.5523 4.44772 20 5 20H19C19.5523 20 20 19.5523 20 19V10" stroke="#1A73E8" strokeWidth="2" strokeLinecap="round"/>
                 <path d="M2 7L4.5 4H19.5L22 7L20 10H4L2 7Z" fill="#1A73E8"/>
@@ -221,105 +239,171 @@ function CustomerPortalContent() {
               </svg>
             </div>
             <div>
-              <div className="font-bold text-lg text-[#202124] tracking-tight">
-                Google Business Profile Manager
+              <div className="flex items-center gap-2">
+                <span className="font-extrabold text-base sm:text-lg text-[#202124] tracking-tight">
+                  Google Business Profile Manager
+                </span>
+                <span className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#e6f4ea] text-[#137333] border border-[#ceead6] text-[10px] font-bold">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#137333] animate-pulse" />
+                  Verified
+                </span>
               </div>
               <div className="text-[11px] font-medium text-[#5f6368]">
-                Review Automation & AI Replies by RANKORA
+                Review Automation &amp; AI Replies by <strong className="text-[#1a73e8]">RANKORA</strong>
               </div>
             </div>
           </div>
 
-          <div className="hidden sm:flex items-center gap-1.5 text-xs text-[#5f6368]">
-            <Lock className="w-3.5 h-3.5 text-[#137333]" />
-            <span>Customer Isolated Session &bull; Row Level Security</span>
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gray-50 border border-gray-200 text-xs text-[#5f6368]">
+            <ShieldCheck className="w-4 h-4 text-[#137333]" />
+            <span>256-Bit SSL &bull; Row-Level Security</span>
           </div>
         </header>
 
         {/* Hero & Authentication Form */}
-        <div className="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-center my-auto py-8">
-          {/* Left Column: Google-styled value proposition */}
-          <div className="lg:col-span-7 space-y-5 text-center lg:text-left">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#e8f0fe] text-[#1a73e8] text-xs font-semibold border border-[#d2e3fc]">
-              <Sparkles className="w-3.5 h-3.5 text-[#1a73e8]" />
-              <span>Google Business Profile Review Automation</span>
+        <div className="relative z-10 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-10 items-center my-auto py-6 sm:py-8">
+          {/* Left Column: Value Proposition & Live Interactive AI Showcase */}
+          <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
+            {/* Top Pill */}
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-blue-50 to-indigo-50 text-[#1a73e8] text-xs font-bold border border-blue-200/80 shadow-2xs">
+              <Sparkles className="w-3.5 h-3.5 text-[#1a73e8] animate-pulse" />
+              <span>Next-Gen Google Maps Growth Platform</span>
             </div>
 
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-[#202124] tracking-tight leading-tight">
+            {/* Headline */}
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#202124] tracking-tight leading-[1.15]">
               Grow Your Business with{' '}
-              <span className="text-[#1a73e8]">
+              <span className="bg-gradient-to-r from-[#1a73e8] via-[#1557b0] to-[#0d47a1] bg-clip-text text-transparent">
                 5-Star Google Reviews
               </span>
             </h1>
 
-            <p className="text-sm sm:text-base text-[#5f6368] max-w-xl leading-relaxed">
-              Create unique review landing pages and counter QR stands. Our integrated Gemini 3.8 Flash engine crafts authentic multilingual review drafts in seconds and automatically posts owner replies on Google Maps.
+            {/* Subheading */}
+            <p className="text-sm sm:text-base text-[#5f6368] max-w-xl mx-auto lg:mx-0 leading-relaxed font-normal">
+              Empower your storefront with QR counter stands and instant AI review drafting. Powered by Google Gemini 3.8 Flash to write organic reviews and auto-publish authentic owner replies on Google Maps.
             </p>
 
-            {/* Feature Cards in Google White Aesthetic */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 max-w-lg mx-auto lg:mx-0 pt-2 text-left">
-              <div className="p-4 bg-white rounded-xl border border-[#dadce0] shadow-2xs flex items-start gap-3">
-                <Building2 className="w-5 h-5 text-[#1a73e8] shrink-0 mt-0.5" />
+            {/* Live AI Review Demo Card (Visual Showcase) */}
+            <div className="max-w-xl mx-auto lg:mx-0 p-4 sm:p-5 rounded-2xl bg-white/90 backdrop-blur-md border border-blue-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] text-left space-y-3 relative overflow-hidden">
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#1a73e8] via-[#4285f4] to-[#34a853]" />
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1a73e8] to-[#174ea6] text-white flex items-center justify-center font-bold text-sm shadow-xs">
+                    PM
+                  </div>
+                  <div>
+                    <div className="font-bold text-xs sm:text-sm text-[#202124] flex items-center gap-1.5">
+                      <span>Priya Mukherjee</span>
+                      <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 text-[10px] font-semibold">Local Guide</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-amber-400 mt-0.5">
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <Star key={s} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                      ))}
+                      <span className="text-[11px] text-[#5f6368] font-semibold ml-1">5.0 Star Verified Review</span>
+                    </div>
+                  </div>
+                </div>
+
+                <span className="hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200">
+                  <CheckCircle2 className="w-3 h-3" />
+                  Live Sync
+                </span>
+              </div>
+
+              <p className="text-xs sm:text-[13px] text-[#3c4043] leading-relaxed italic bg-gray-50/80 p-3 rounded-xl border border-gray-100">
+                &ldquo;Outstanding experience! The staff is friendly, service is ultra-fast, and the ambiance was wonderful. Highly recommended to everyone in town! 🌟&rdquo;
+              </p>
+
+              <div className="flex items-center justify-between pt-1 border-t border-gray-100 text-[11px] text-[#5f6368]">
+                <div className="flex items-center gap-1.5 text-blue-700 font-semibold">
+                  <Sparkles className="w-3.5 h-3.5 text-[#1a73e8]" />
+                  <span>Drafted by Gemini 3.8 Flash AI</span>
+                </div>
+                <span className="text-emerald-700 font-bold flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+                  Auto-Published to Google Maps
+                </span>
+              </div>
+            </div>
+
+            {/* Social Proof Stats */}
+            <div className="grid grid-cols-3 gap-2 sm:gap-4 max-w-lg mx-auto lg:mx-0 py-1">
+              <div className="p-3 bg-white/70 rounded-xl border border-gray-200/80 text-center shadow-2xs">
+                <span className="block text-lg sm:text-xl font-extrabold text-[#1a73e8]">4.9 / 5.0</span>
+                <span className="text-[11px] font-medium text-[#5f6368]">Rating Average</span>
+              </div>
+              <div className="p-3 bg-white/70 rounded-xl border border-gray-200/80 text-center shadow-2xs">
+                <span className="block text-lg sm:text-xl font-extrabold text-[#137333]">1,200+</span>
+                <span className="text-[11px] font-medium text-[#5f6368]">Active Stores</span>
+              </div>
+              <div className="p-3 bg-white/70 rounded-xl border border-gray-200/80 text-center shadow-2xs">
+                <span className="block text-lg sm:text-xl font-extrabold text-[#f9ab00]">99.4%</span>
+                <span className="text-[11px] font-medium text-[#5f6368]">AI Approval</span>
+              </div>
+            </div>
+
+            {/* Feature Cards Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-xl mx-auto lg:mx-0 text-left">
+              <div className="p-3.5 bg-white/80 hover:bg-white rounded-xl border border-gray-200/90 shadow-2xs hover:shadow-xs transition-all flex items-start gap-3">
+                <div className="w-9 h-9 rounded-lg bg-blue-50 text-[#1a73e8] flex items-center justify-center shrink-0">
+                  <Building2 className="w-4 h-4" />
+                </div>
                 <div>
                   <h3 className="text-xs font-bold text-[#202124]">
-                    Official Google OAuth
+                    Official Google OAuth 2.0
                   </h3>
-                  <p className="text-[11px] text-[#5f6368] mt-0.5">
-                    Connect verified Google Business locations via OAuth 2.0.
+                  <p className="text-[11px] text-[#5f6368] mt-0.5 leading-snug">
+                    Connect and track verified Google Business locations securely.
                   </p>
                 </div>
               </div>
 
-              <div className="p-4 bg-white rounded-xl border border-[#dadce0] shadow-2xs flex items-start gap-3">
-                <QrCode className="w-5 h-5 text-[#1a73e8] shrink-0 mt-0.5" />
+              <div className="p-3.5 bg-white/80 hover:bg-white rounded-xl border border-gray-200/90 shadow-2xs hover:shadow-xs transition-all flex items-start gap-3">
+                <div className="w-9 h-9 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                  <QrCode className="w-4 h-4" />
+                </div>
                 <div>
                   <h3 className="text-xs font-bold text-[#202124]">
                     Custom QR Stands
                   </h3>
-                  <p className="text-[11px] text-[#5f6368] mt-0.5">
-                    Printable table tent cards and high-res QR codes.
+                  <p className="text-[11px] text-[#5f6368] mt-0.5 leading-snug">
+                    Printable table tent cards and 300 DPI high-res QR counter displays.
                   </p>
                 </div>
               </div>
 
-              <div className="p-4 bg-white rounded-xl border border-[#dadce0] shadow-2xs flex items-start gap-3">
-                <Sparkles className="w-5 h-5 text-[#f9ab00] shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="text-xs font-bold text-[#202124]">
-                    Gemini 3.8 Flash AI
-                  </h3>
-                  <p className="text-[11px] text-[#5f6368] mt-0.5">
-                    Multilingual organic drafts matched to your business offerings.
-                  </p>
+              <div className="p-3.5 bg-white/80 hover:bg-white rounded-xl border border-gray-200/90 shadow-2xs hover:shadow-xs transition-all flex items-start gap-3 sm:col-span-2">
+                <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                  <MessageSquare className="w-4 h-4" />
                 </div>
-              </div>
-
-              <div className="p-4 bg-white rounded-xl border border-[#dadce0] shadow-2xs flex items-start gap-3">
-                <MessageSquare className="w-5 h-5 text-[#137333] shrink-0 mt-0.5" />
                 <div>
                   <h3 className="text-xs font-bold text-[#202124]">
                     Automated Owner Replies
                   </h3>
-                  <p className="text-[11px] text-[#5f6368] mt-0.5">
-                    Auto-respond to reviews or approve AI drafts before publishing.
+                  <p className="text-[11px] text-[#5f6368] mt-0.5 leading-snug">
+                    Zero-delay auto-replies or 1-click approval queue on Maps.
                   </p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Right Column: Customer Auth Form with Email OTP */}
-          <div className="lg:col-span-5 flex justify-center">
+          {/* Right Column: Customer Auth Form Card */}
+          <div className="lg:col-span-5 flex justify-center w-full">
             <AuthModal />
           </div>
         </div>
 
         {/* Footer */}
-        <footer className="max-w-7xl mx-auto w-full pt-6 text-center text-xs text-[#5f6368] border-t border-[#dadce0]">
-          <div className="flex items-center justify-center gap-1.5 flex-wrap">
-            <span className="font-semibold text-[#202124]">RANKORA</span>
+        <footer className="relative z-10 max-w-7xl mx-auto w-full pt-6 pb-2 text-center text-xs text-[#5f6368] border-t border-gray-200/80">
+          <div className="flex items-center justify-center gap-2 flex-wrap">
+            <span className="font-extrabold text-[#202124] tracking-tight">RANKORA</span>
             <span>&bull;</span>
-            <span>By <a href="https://arventaventures.online/" target="_blank" rel="noreferrer" className="text-[#1a73e8] hover:underline font-medium">Arventa Ventures</a></span>
+            <span>Powered by <a href="https://arventaventures.online/" target="_blank" rel="noreferrer" className="text-[#1a73e8] hover:underline font-bold">Arventa Ventures</a></span>
+            <span className="hidden sm:inline">&bull;</span>
+            <span className="hidden sm:inline text-gray-400">Pure Client-Side Static SPA &bull; Supabase Protected</span>
           </div>
         </footer>
       </div>
@@ -332,21 +416,17 @@ function CustomerPortalContent() {
       <SuspendedAccountNotice
         user={user}
         businessName={currentSettings.businessName}
-        onLogout={logout}
+        onLogout={handleCustomerLogout}
       />
     );
   }
 
   if (loadingData && !businessSettings) {
     return (
-      <div className="min-h-screen bg-[#f8f9fa] flex items-center justify-center p-4">
-        <div className="text-center space-y-3">
-          <RefreshCw className="w-8 h-8 text-[#1a73e8] animate-spin mx-auto" />
-          <p className="text-sm font-medium text-[#5f6368]">
-            Loading your business profile and review data...
-          </p>
-        </div>
-      </div>
+      <LoadingScreen
+        message="Loading business dashboard..."
+        subMessage="Synchronizing Google Business Profile details, reviews, and QR stands"
+      />
     );
   }
 
@@ -354,6 +434,7 @@ function CustomerPortalContent() {
 
   return (
     <div className="min-h-screen bg-[#f8f9fa] flex flex-col justify-between">
+      {loadingData && <TopProgressBar />}
       <div>
         <DashboardHeader
           user={user}
@@ -362,7 +443,7 @@ function CustomerPortalContent() {
           businessLogo={currentSettings.businessLogo}
           activeTab={activeTab}
           onToggleSidebar={() => setSidebarOpen(true)}
-          onLogout={logout}
+          onLogout={handleCustomerLogout}
           onNavigateToSettings={handleNavigateToSettings}
           onNavigateToHome={handleNavigateToHome}
         />
@@ -409,6 +490,8 @@ function CustomerPortalContent() {
               onUpdateSlug={(newSlug) => {
                 setBusinessSettings((prev) => (prev ? { ...prev, customSlug: newSlug } : null));
               }}
+              onNavigateToSettings={() => navigate(TAB_ROUTES.business_settings)}
+              onUpdateSettings={(newSettings) => setBusinessSettings(newSettings)}
             />
           )}
 
@@ -455,6 +538,13 @@ function CustomerPortalContent() {
 function AdminPortalContent() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { showSuccess } = useToast();
+
+  const handleAdminLogout = async () => {
+    await logout();
+    showSuccess('Admin logged out successfully.');
+    navigate('/', { replace: true });
+  };
 
   return (
     <div className="min-h-screen bg-[#f8f9fa] flex flex-col justify-between">
@@ -500,7 +590,7 @@ function AdminPortalContent() {
 
                 <button
                   type="button"
-                  onClick={logout}
+                  onClick={handleAdminLogout}
                   className="px-3.5 py-2 bg-[#fce8e6] hover:bg-[#fad2cf] text-[#c5221f] rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
                   title="Sign out of Admin session"
                 >

@@ -59,7 +59,7 @@ serve(async (req) => {
         <div class="card">
           <div class="logo">RANKORA &bull; Google Business Profile</div>
           <div class="title">${purpose === "registration" ? "Verify Your Email Address" : "Password Reset Request"}</div>
-          <div class="text">${greeting}<br>Please use the 6-digit verification code below to ${actionText}. This code will expire in <strong>10 minutes</strong>.</div>
+          <div class="text">${greeting}<br>Please use the 8-digit verification code below to ${actionText}. This code will expire in <strong>10 minutes</strong>.</div>
           <div class="otp-box">
             <div class="otp-code">${otpCode}</div>
           </div>
@@ -91,7 +91,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        message: `A 6-digit verification code has been dispatched to ${toEmail}.`,
+        message: `An 8-digit verification code has been dispatched to ${toEmail}.`,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

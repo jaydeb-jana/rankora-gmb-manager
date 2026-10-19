@@ -11,12 +11,16 @@ import {
   CheckCircle2,
   ThumbsUp,
   MapPin,
-  Star,
   AlertCircle,
+  AlertTriangle,
+  Info,
   ShieldAlert,
   MessageCircle,
+  Link as LinkIcon,
+  Star,
 } from 'lucide-react';
 import { api } from '../../lib/api';
+import { LoadingScreen } from '../common/LoadingScreen';
 
 interface PublicReviewPageProps {
   slug: string;
@@ -96,7 +100,7 @@ const RATING_EMOJIS = [
   },
 ];
 
-const DEFAULT_HIGHLIGHT_CHIPS = [
+const POSITIVE_CHIPS = [
   '🌟 Friendly & Welcoming Staff',
   '⚡ Quick & Prompt Service',
   '💎 Exceptional Quality',
@@ -110,6 +114,34 @@ const DEFAULT_HIGHLIGHT_CHIPS = [
   '💯 Authentic & Trustworthy',
   '✨ Smooth & Easy Experience',
 ];
+
+const NEUTRAL_CHIPS = [
+  '⚖️ Average Service',
+  '👌 Decent Quality',
+  '⏳ Moderate Wait Time',
+  '💵 Fair Pricing',
+  '🔧 Needs Minor Improvement',
+  '😐 Standard Experience',
+  '📦 Acceptable Packaging',
+  '📞 Basic Customer Support',
+];
+
+const CRITICAL_CHIPS = [
+  '⚠️ Slow & Delayed Service',
+  '❌ Poor Communication',
+  '💸 High & Unclear Pricing',
+  '👎 Unhelpful Staff Behavior',
+  '🛠️ Quality Not as Expected',
+  '⏳ Long Waiting Time',
+  '📞 Lack of Support / Follow-up',
+  '🚨 Needs Major Improvement',
+];
+
+function getChipsForRating(rating: number): string[] {
+  if (rating >= 4) return POSITIVE_CHIPS;
+  if (rating === 3) return NEUTRAL_CHIPS;
+  return CRITICAL_CHIPS;
+}
 
 function pickLanguageByWeight(
   preferences?: Array<{ code: string; name: string; percentage?: number }>
@@ -177,10 +209,8 @@ export function PublicReviewPage({ slug, onBackToDashboard }: PublicReviewPagePr
           if (data.languagePreferences && data.languagePreferences.length > 0) {
             setSelectedLanguage(pickLanguageByWeight(data.languagePreferences));
           }
-          // Pre-select first service if available
-          if (data.services && data.services.length > 0) {
-            setSelectedServices([data.services[0]]);
-          }
+          // Do not pre-select any services by default - customer taps to select
+          setSelectedServices([]);
         }
       })
       .catch(() => {
@@ -194,6 +224,14 @@ export function PublicReviewPage({ slug, onBackToDashboard }: PublicReviewPagePr
       isMounted = false;
     };
   }, [slug]);
+
+  const handleRatingChange = (newRating: number) => {
+    setStarRating(newRating);
+    setGeneratedDraft('');
+    setGenerationError(null);
+    const newChips = getChipsForRating(newRating);
+    setSelectedChips([newChips[0], newChips[1]]);
+  };
 
   const toggleService = (service: string) => {
     setSelectedServices((prev) =>
@@ -285,14 +323,10 @@ export function PublicReviewPage({ slug, onBackToDashboard }: PublicReviewPagePr
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f8f9fa] flex items-center justify-center p-4">
-        <div className="text-center space-y-3">
-          <RefreshCw className="w-8 h-8 text-[#1a73e8] animate-spin mx-auto" />
-          <p className="text-sm font-medium text-[#5f6368]">
-            Connecting to Google Business Profile...
-          </p>
-        </div>
-      </div>
+      <LoadingScreen
+        message="Connecting to Google Business Profile..."
+        subMessage="Fetching verified business profile & Google Maps review gateway"
+      />
     );
   }
 
@@ -313,6 +347,36 @@ export function PublicReviewPage({ slug, onBackToDashboard }: PublicReviewPagePr
             <button
               onClick={onBackToDashboard}
               className="px-4 py-2 bg-[#1a73e8] text-white rounded-lg text-xs font-medium hover:bg-[#1557b0] transition-colors cursor-pointer"
+            >
+              Return to Dashboard
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (!business.googleReviewUrl || !business.googleReviewUrl.trim()) {
+    return (
+      <div className="min-h-screen bg-[#f8f9fa] flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white border border-[#dadce0] rounded-2xl p-6 sm:p-8 text-center space-y-4 shadow-sm">
+          <div className="w-14 h-14 rounded-2xl bg-[#fef7e0] border border-[#feefc3] text-[#b06000] mx-auto flex items-center justify-center shadow-2xs">
+            <LinkIcon className="w-7 h-7 text-[#ea8600]" />
+          </div>
+          <h2 className="text-lg sm:text-xl font-bold text-[#202124]">
+            Google Review Link Required
+          </h2>
+          <p className="text-xs sm:text-sm text-[#5f6368] leading-relaxed">
+            The business owner of <strong>{business.businessName || 'this business'}</strong> has not connected their official Google Review Submission URL yet.
+          </p>
+          <div className="p-3.5 bg-[#f8f9fa] rounded-xl border border-[#dadce0] text-xs text-[#5f6368] text-left space-y-1">
+            <p className="font-semibold text-[#202124]">To the business owner:</p>
+            <p>Please log in to your dashboard and connect your Google Review Submission URL under <strong>Review Link &amp; QR Stand</strong> to activate this review page.</p>
+          </div>
+          {onBackToDashboard && (
+            <button
+              onClick={onBackToDashboard}
+              className="px-5 py-2.5 bg-[#1a73e8] text-white rounded-xl text-xs font-semibold hover:bg-[#1557b0] transition-colors cursor-pointer"
             >
               Return to Dashboard
             </button>
@@ -561,7 +625,7 @@ export function PublicReviewPage({ slug, onBackToDashboard }: PublicReviewPagePr
                   <button
                     type="button"
                     key={item.rating}
-                    onClick={() => setStarRating(item.rating)}
+                    onClick={() => handleRatingChange(item.rating)}
                     className="flex flex-col items-center gap-1.5 focus:outline-none group cursor-pointer transition-transform active:scale-95"
                     aria-label={`${item.rating} star - ${item.label}`}
                   >
@@ -608,38 +672,66 @@ export function PublicReviewPage({ slug, onBackToDashboard }: PublicReviewPagePr
             </div>
           </div>
 
-          {/* STEP 3: WHAT STOOD OUT THE MOST? (Positive Highlights) */}
-          <div className="space-y-2.5 pt-1">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-[#202124] flex items-center gap-1.5 tracking-wide">
-                <ThumbsUp className="w-3.5 h-3.5 text-[#1a73e8]" />
-                <span>WHAT STOOD OUT THE MOST?</span>
-              </label>
-              <span className="text-[11px] text-[#5f6368]">
-                Tap to select
-              </span>
-            </div>
+          {/* STEP 3: EXPERIENCE HIGHLIGHTS / FEEDBACK / ISSUES (Dynamically adapts to Rating) */}
+          {(() => {
+            const isPos = starRating >= 4;
+            const isNeu = starRating === 3;
+            const activeChipsList = getChipsForRating(starRating);
 
-            <div className="flex flex-wrap gap-2">
-              {DEFAULT_HIGHLIGHT_CHIPS.map((chip) => {
-                const selected = selectedChips.includes(chip);
-                return (
-                  <button
-                    type="button"
-                    key={chip}
-                    onClick={() => toggleChip(chip)}
-                    className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-colors cursor-pointer border ${
-                      selected
-                        ? 'bg-[#e8f0fe] border-[#1a73e8] text-[#1a73e8] ring-1 ring-[#1a73e8] shadow-2xs font-semibold'
-                        : 'bg-white border-[#dadce0] text-[#3c4043] hover:bg-[#f8f9fa] hover:border-[#1a73e8]/40'
-                    }`}
-                  >
-                    {chip}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+            return (
+              <div className="space-y-2.5 pt-1">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-[#202124] flex items-center gap-1.5 tracking-wide">
+                    {isPos ? (
+                      <ThumbsUp className="w-3.5 h-3.5 text-[#188038]" />
+                    ) : isNeu ? (
+                      <Info className="w-3.5 h-3.5 text-[#e37400]" />
+                    ) : (
+                      <AlertTriangle className="w-3.5 h-3.5 text-[#d93025]" />
+                    )}
+                    <span>
+                      {isPos
+                        ? 'WHAT STOOD OUT THE MOST?'
+                        : isNeu
+                        ? 'WHAT WAS YOUR EXPERIENCE LIKE?'
+                        : 'WHAT ISSUES DID YOU FACE?'}
+                    </span>
+                  </label>
+                  <span className="text-[11px] text-[#5f6368]">
+                    {isPos
+                      ? 'Tap to select positives'
+                      : isNeu
+                      ? 'Tap to select feedback'
+                      : 'Tap to select issues'}
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {activeChipsList.map((chip) => {
+                    const selected = selectedChips.includes(chip);
+                    return (
+                      <button
+                        type="button"
+                        key={chip}
+                        onClick={() => toggleChip(chip)}
+                        className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-colors cursor-pointer border ${
+                          selected
+                            ? isPos
+                              ? 'bg-[#e8f0fe] border-[#1a73e8] text-[#1a73e8] ring-1 ring-[#1a73e8] shadow-2xs font-semibold'
+                              : isNeu
+                              ? 'bg-[#fef7e0] border-[#e37400] text-[#b06000] ring-1 ring-[#e37400] shadow-2xs font-semibold'
+                              : 'bg-[#fce8e6] border-[#d93025] text-[#d93025] ring-1 ring-[#d93025] shadow-2xs font-semibold'
+                            : 'bg-white border-[#dadce0] text-[#3c4043] hover:bg-[#f8f9fa] hover:border-[#1a73e8]/40'
+                        }`}
+                      >
+                        {chip}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* STEP 4: REVIEW LANGUAGE SELECTION */}
           <div className="flex items-center justify-between pt-1">

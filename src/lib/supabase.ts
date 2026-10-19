@@ -20,6 +20,38 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
   },
 });
 
+// Global Realtime Channel for Instant Real-Time Sync across all clients, tabs, and devices
+export const realtimeChannel = supabase.channel('rankora-realtime', {
+  config: { broadcast: { ack: false, self: false } },
+});
+try {
+  realtimeChannel.subscribe();
+} catch (e) {
+  console.warn('Realtime channel subscription note:', e);
+}
+
+export function broadcastUsersChange(eventType: string, payload: any = {}): void {
+  try {
+    realtimeChannel.send({
+      type: 'broadcast',
+      event: 'users_sync',
+      payload: { eventType, ...payload, timestamp: Date.now() },
+    });
+  } catch {}
+
+  try {
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      const bc = new BroadcastChannel('rankora_realtime_sync');
+      bc.postMessage({ eventType, ...payload, timestamp: Date.now() });
+      bc.close();
+    }
+  } catch {}
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('rankora_users_updated', { detail: { eventType, ...payload } }));
+  }
+}
+
 // Local persistence cache keys for resilience
 const LOCAL_USERS_KEY = 'rankora_supabase_users';
 const LOCAL_SETTINGS_KEY = 'rankora_supabase_settings';
@@ -36,18 +68,19 @@ export const DEFAULT_PRICING_PLANS: PricingPlan[] = [
     id: 'pro-plan',
     name: 'Pro Plan',
     tagline: 'Essential review automation for single store owners & local shops.',
-    monthlyPrice: 999,
-    yearlyPrice: 799,
+    monthlyPrice: 749,
+    yearlyPrice: 599,
     currency: '₹',
     isPopular: false,
     isActive: true,
     order: 1,
     whatsAppText: 'Hello Arventa Ventures, I would like to activate the Pro Plan for my RANKORA Google Business Profile automation.',
     features: [
+      '10 High-Quality AI Review Generations / Day',
       '1 Verified Google Location with live review tracking',
       '16+ Table Tent Stand Layouts (PNG & 300 DPI Print ready)',
       '2 Languages Support (English + 1 Regional Language)',
-      'Gemini 3.8 Flash Engine for authentic customer review drafts',
+      'Advanced Gemini Flash AI Engine for human-like 5-star drafts',
       'Owner Reply Approval Queue with 1-click publishing',
       'Custom Review Slug Landing Page with direct Google Maps link',
       'Standard Email Support (24-hour response turnaround)',
@@ -57,14 +90,15 @@ export const DEFAULT_PRICING_PLANS: PricingPlan[] = [
     id: 'ultra-plan',
     name: 'Ultra Plan',
     tagline: 'High-volume retail chains, agencies & multi-counter stores.',
-    monthlyPrice: 2499,
-    yearlyPrice: 1999,
+    monthlyPrice: 1499,
+    yearlyPrice: 1200,
     currency: '₹',
     isPopular: true,
     isActive: true,
     order: 2,
     whatsAppText: 'Hello Arventa Ventures, I would like to activate the Ultra Plan for my RANKORA Google Business Profile automation.',
     features: [
+      'Unlimited Daily AI Review Generations (No Daily Limit)',
       'Multi-Location Support & unlimited QR counter stand downloads',
       'Zero-Delay Auto-Publishing: owner replies post automatically',
       'High-Resolution Vector SVG & PDF commercial printing assets',
@@ -182,13 +216,45 @@ export const REAL_INITIAL_USERS: Array<{
   },
   {
     user: {
+      id: 'usr_mateyjj394_proguidex',
+      email: 'mateyjj394@proguidex.com',
+      fullName: 'Jaydeb',
+      mobileNumber: '+91 8001698004',
+      isVerified: true,
+      role: 'user',
+      status: 'suspended',
+      planId: 'pro-plan',
+      businessName: 'Jana',
+      password: 'Jaydeb@123',
+      createdAt: '2026-10-18T11:00:00.000Z',
+    },
+    settings: {
+      id: 'biz-usr_mateyjj394_proguidex',
+      userId: 'usr_mateyjj394_proguidex',
+      businessName: 'Jana',
+      category: 'Local Service & Retail',
+      googleReviewUrl: 'https://g.page/r/CbOgJVgsB5vAEAE/review',
+      customSlug: 'jana-store',
+      brandTone: 'friendly',
+      languagePreferences: [{ code: 'en', name: 'English', percentage: 100 }],
+      autoReplyEnabled: true,
+      autoReplyMode: 'approval',
+      minStarRating: 4,
+      responseDelayMinutes: 5,
+    },
+    googleAccount: {
+      connected: false,
+    },
+  },
+  {
+    user: {
       id: 'usr_mateyij394_proguidex',
       email: 'mateyij394@proguidex.com',
       fullName: 'Jaydeb',
       mobileNumber: '+91 8001698004',
       isVerified: true,
       role: 'user',
-      status: 'active',
+      status: 'suspended',
       planId: 'pro-plan',
       businessName: 'Jana',
       password: 'Jaydeb@123',
@@ -366,8 +432,8 @@ export const supabaseService = {
         console.warn('Supabase Auth signUp note (Edge Function will dispatch OTP):', authError.message);
       }
 
-      // Generate verification record
-      const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+      // Generate verification record (Strictly 8-digit OTP)
+      const otpCode = Math.floor(10000000 + Math.random() * 90000000).toString();
       const otps = getLocalStore<Record<string, any>>(LOCAL_OTP_KEY, {});
       otps[email] = {
         code: otpCode,
@@ -417,7 +483,7 @@ export const supabaseService = {
 
       return {
         success: true,
-        message: `A 6-digit verification code has been dispatched to ${email}. Please check your inbox and spam folder.`,
+        message: `An 8-digit verification code has been dispatched to ${email}. Please check your inbox and spam folder.`,
       };
     } catch (err: any) {
       return { error: err.message || 'Failed to complete registration.' };
@@ -489,6 +555,20 @@ export const supabaseService = {
       // Initialize Business Settings in Supabase
       await this.initDefaultBusinessSettings(user.id, user.businessName || `${user.fullName}'s Business`);
 
+      // Sync user profile to Supabase
+      try {
+        await supabase.from('profiles').upsert({
+          full_name: user.fullName,
+          email: user.email,
+          mobile_number: user.mobileNumber,
+          created_at: user.createdAt,
+          updated_at: new Date().toISOString(),
+        });
+      } catch {}
+
+      // Broadcast instant real-time sync across all devices and open tabs
+      broadcastUsersChange('user_registered', { user });
+
       return {
         success: true,
         message: 'Account successfully verified and registered with Supabase.',
@@ -529,7 +609,7 @@ export const supabaseService = {
       console.warn('Supabase resendOtp note:', err);
     }
 
-    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpCode = Math.floor(10000000 + Math.random() * 90000000).toString();
     const otps = getLocalStore<Record<string, any>>(LOCAL_OTP_KEY, {});
     otps[email] = {
       ...(otps[email] || {}),
@@ -557,7 +637,7 @@ export const supabaseService = {
 
     return {
       success: true,
-      message: `A fresh 6-digit code has been dispatched to ${email}. Please check your inbox and spam folder.`,
+      message: `A fresh 8-digit verification code has been dispatched to ${email}. Please check your inbox and spam folder.`,
     };
   },
 
@@ -734,6 +814,34 @@ export const supabaseService = {
     }
   },
 
+  async logout(): Promise<{ success: boolean }> {
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.warn('Supabase auth signOut error:', e);
+    }
+    // Remove local storage user and tokens
+    localStorage.removeItem(LOCAL_CURRENT_USER_KEY);
+    localStorage.removeItem(LOCAL_IMPERSONATOR_KEY);
+    localStorage.removeItem('rankora_token');
+    localStorage.removeItem('reputepulse_token');
+
+    // Clean any Supabase auth keys from localStorage
+    try {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith('sb-') || key.includes('auth-token') || key.startsWith('supabase.auth'))) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach((k) => localStorage.removeItem(k));
+    } catch {}
+
+    broadcastUsersChange('user_logged_out', {});
+    return { success: true };
+  },
+
   async forgotPassword(email: string) {
     const trimmed = email.toLowerCase().trim();
     try {
@@ -754,7 +862,7 @@ export const supabaseService = {
       console.warn('Supabase resetPasswordForEmail note:', err);
     }
 
-    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpCode = Math.floor(10000000 + Math.random() * 90000000).toString();
     const otps = getLocalStore<Record<string, any>>(LOCAL_OTP_KEY, {});
     otps[trimmed] = {
       code: otpCode,
@@ -781,7 +889,7 @@ export const supabaseService = {
 
     return {
       success: true,
-      message: `A password reset code has been dispatched to ${trimmed}. Please check your inbox and spam folder.`,
+      message: `An 8-digit password reset code has been dispatched to ${trimmed}. Please check your inbox and spam folder.`,
     };
   },
 
@@ -853,8 +961,7 @@ export const supabaseService = {
       brandTone: 'friendly',
       targetKeywords: ['best store', 'friendly staff', 'great collection', 'fast service'],
       languagePreferences: [
-        { code: 'en', name: 'English', percentage: 70 },
-        { code: 'hi', name: 'Hindi', percentage: 30 },
+        { code: 'en', name: 'English', percentage: 100 },
       ],
       autoReplyEnabled: true,
       autoReplyMode: 'approval',
@@ -1311,8 +1418,7 @@ export const supabaseService = {
           brandTone: data.brand_tone || 'friendly',
           targetKeywords: data.target_keywords || [],
           languagePreferences: data.language_preferences || [
-            { code: 'en', name: 'English', percentage: 70 },
-            { code: 'hi', name: 'Hindi', percentage: 30 },
+            { code: 'en', name: 'English', percentage: 100 },
           ],
           shopAiDetails: data.google_account_info?.shopAiDetails || '',
           reviewWritingRules: data.google_account_info?.reviewWritingRules || '',
@@ -1345,8 +1451,7 @@ export const supabaseService = {
           brandTone: biz.brandTone || 'friendly',
           targetKeywords: biz.targetKeywords || [],
           languagePreferences: biz.languagePreferences || [
-            { code: 'en', name: 'English', percentage: 70 },
-            { code: 'hi', name: 'Hindi', percentage: 30 },
+            { code: 'en', name: 'English', percentage: 100 },
           ],
           shopAiDetails: biz.shopAiDetails || '',
           reviewWritingRules: biz.reviewWritingRules || '',
@@ -1371,8 +1476,7 @@ export const supabaseService = {
         brandTone: biz.brandTone || 'friendly',
         targetKeywords: biz.targetKeywords || [],
         languagePreferences: biz.languagePreferences || [
-          { code: 'en', name: 'English', percentage: 70 },
-          { code: 'hi', name: 'Hindi', percentage: 30 },
+          { code: 'en', name: 'English', percentage: 100 },
         ],
         shopAiDetails: biz.shopAiDetails || '',
         reviewWritingRules: biz.reviewWritingRules || '',
@@ -1391,8 +1495,7 @@ export const supabaseService = {
       brandTone: 'friendly',
       targetKeywords: ['best store', 'friendly staff', 'great collection', 'fast service'],
       languagePreferences: [
-        { code: 'en', name: 'English', percentage: 70 },
-        { code: 'hi', name: 'Hindi', percentage: 30 },
+        { code: 'en', name: 'English', percentage: 100 },
       ],
     };
   },
@@ -1401,7 +1504,11 @@ export const supabaseService = {
     syncRealUsers();
     const realUsersMap: Record<string, CustomerUser> = {};
 
-    // 1. Fetch real registered users from Supabase PostgreSQL profiles table
+    // 1. Load local persistence stores first to prevent TDZ reference errors
+    const usersRecord = getLocalStore<Record<string, any>>(LOCAL_USERS_KEY, {});
+    const allSettings = getLocalStore<Record<string, BusinessSettings>>(LOCAL_SETTINGS_KEY, {});
+
+    // 2. Fetch real registered users from Supabase PostgreSQL profiles table
     try {
       const { data: profiles, error } = await supabase
         .from('profiles')
@@ -1429,18 +1536,19 @@ export const supabaseService = {
           if (email === 'contact@arventacafe.com' || email === 'support@apexmotors.in' || email === 'manager@royaldental.com') {
             return;
           }
+          const existingLocal = usersRecord[email];
           realUsersMap[email] = {
-            id: p.id,
+            id: p.id || existingLocal?.id || 'usr_' + Math.random().toString(36).slice(2, 8),
             email: p.email,
-            fullName: p.full_name || 'Business Owner',
-            mobileNumber: p.mobile_number || '',
+            fullName: p.full_name || existingLocal?.fullName || 'Business Owner',
+            mobileNumber: p.mobile_number || existingLocal?.mobileNumber || '',
             isVerified: true,
-            createdAt: p.created_at || new Date().toISOString(),
-            role: email === 'info@arventaventures.online' ? 'admin' : 'user',
-            status: 'active',
-            businessName: bizMap.get(p.id) || `${p.full_name || 'My'}'s Business`,
-            planId: 'pro-plan',
-            password: usersRecord[email]?.password || p.raw_user_meta_data?.password || 'Jaydeb@123',
+            createdAt: p.created_at || existingLocal?.createdAt || new Date().toISOString(),
+            role: email === ADMIN_CREDENTIALS.email.toLowerCase() ? 'admin' : 'user',
+            status: existingLocal?.status || 'active',
+            businessName: bizMap.get(p.id) || existingLocal?.businessName || `${p.full_name || 'My'}'s Business`,
+            planId: existingLocal?.planId || 'pro-plan',
+            password: existingLocal?.password || p.raw_user_meta_data?.password || 'Jaydeb@123',
           };
         });
       }
@@ -1448,10 +1556,7 @@ export const supabaseService = {
       console.warn('Supabase profiles query error:', e);
     }
 
-    // 2. Combine with locally registered or admin-created users
-    const usersRecord = getLocalStore<Record<string, any>>(LOCAL_USERS_KEY, {});
-    const allSettings = getLocalStore<Record<string, BusinessSettings>>(LOCAL_SETTINGS_KEY, {});
-
+    // 3. Combine with locally registered or admin-created users
     Object.values(usersRecord).forEach((u: any) => {
       if (!u || !u.email) return;
       const email = u.email.toLowerCase().trim();
@@ -1468,7 +1573,7 @@ export const supabaseService = {
         mobileNumber: u.mobileNumber || existing?.mobileNumber || '',
         isVerified: u.isVerified ?? existing?.isVerified ?? true,
         createdAt: u.createdAt || existing?.createdAt || new Date().toISOString(),
-        role: u.role || existing?.role || (email === 'info@arventaventures.online' ? 'admin' : 'user'),
+        role: u.role || existing?.role || (email === ADMIN_CREDENTIALS.email.toLowerCase() ? 'admin' : 'user'),
         status: u.status || existing?.status || 'active',
         businessName: userSettings?.businessName || u.businessName || existing?.businessName || `${u.fullName || 'Business Owner'}'s Business`,
         planId: u.planId || existing?.planId || 'pro-plan',
@@ -1476,7 +1581,7 @@ export const supabaseService = {
       };
     });
 
-    // 3. Guarantee all initial verified users are included
+    // 4. Guarantee all initial verified users are included
     REAL_INITIAL_USERS.forEach(({ user, settings }) => {
       const email = user.email.toLowerCase().trim();
       if (!realUsersMap[email]) {
@@ -1485,18 +1590,23 @@ export const supabaseService = {
           businessName: settings?.businessName || user.businessName || `${user.fullName}'s Business`,
           password: user.password || usersRecord[email]?.password || 'Jaydeb@123',
         };
-      } else if (!realUsersMap[email].password) {
-        realUsersMap[email].password = user.password || usersRecord[email]?.password || 'Jaydeb@123';
+      } else {
+        if (!realUsersMap[email].password) {
+          realUsersMap[email].password = user.password || usersRecord[email]?.password || 'Jaydeb@123';
+        }
+        if (!realUsersMap[email].businessName && settings?.businessName) {
+          realUsersMap[email].businessName = settings.businessName;
+        }
       }
     });
 
     return { users: Object.values(realUsersMap) };
   },
 
-  updateUser(
+  async updateUser(
     userId: string,
     data: Partial<CustomerUser> & { businessName?: string }
-  ): { success: boolean; user?: CustomerUser; error?: string } {
+  ): Promise<{ success: boolean; user?: CustomerUser; error?: string }> {
     const usersRecord = getLocalStore<Record<string, any>>(LOCAL_USERS_KEY, {});
     const targetEmail = Object.keys(usersRecord).find((e) => usersRecord[e].id === userId);
 
@@ -1538,10 +1648,21 @@ export const supabaseService = {
       setLocalStore(LOCAL_CURRENT_USER_KEY, { ...currentUser, ...updatedUser });
     }
 
+    // Sync to Supabase profiles
+    try {
+      await supabase.from('profiles').update({
+        full_name: updatedUser.fullName,
+        mobile_number: updatedUser.mobileNumber,
+        updated_at: new Date().toISOString(),
+      }).eq('email', newEmail);
+    } catch {}
+
+    broadcastUsersChange('user_updated', { userId, user: updatedUser });
+
     return { success: true, user: updatedUser };
   },
 
-  deleteUser(userId: string): { success: boolean; error?: string } {
+  async deleteUser(userId: string): Promise<{ success: boolean; error?: string }> {
     if (userId === 'admin_arventa_super') {
       return { success: false, error: 'Cannot delete the Super Administrator account.' };
     }
@@ -1567,10 +1688,19 @@ export const supabaseService = {
     delete allGoogle[userId];
     setLocalStore(LOCAL_GOOGLE_KEY, allGoogle);
 
+    // Delete from Supabase profiles
+    try {
+      if (targetEmail) {
+        await supabase.from('profiles').delete().eq('email', targetEmail);
+      }
+    } catch {}
+
+    broadcastUsersChange('user_deleted', { userId });
+
     return { success: true };
   },
 
-  toggleSuspendUser(userId: string): { success: boolean; status?: 'active' | 'suspended'; error?: string } {
+  async toggleSuspendUser(userId: string): Promise<{ success: boolean; status?: 'active' | 'suspended'; error?: string }> {
     if (userId === 'admin_arventa_super') {
       return { success: false, error: 'Cannot suspend the Super Administrator account.' };
     }
@@ -1593,17 +1723,19 @@ export const supabaseService = {
       setLocalStore(LOCAL_CURRENT_USER_KEY, currentUser);
     }
 
+    broadcastUsersChange('user_status_changed', { userId, status: newStatus });
+
     return { success: true, status: newStatus };
   },
 
-  createUser(data: {
+  async createUser(data: {
     fullName: string;
     email: string;
     mobileNumber: string;
     businessName: string;
     password?: string;
     planId?: string;
-  }): { success: boolean; user?: CustomerUser; error?: string } {
+  }): Promise<{ success: boolean; user?: CustomerUser; error?: string }> {
     const email = data.email.toLowerCase().trim();
     const usersRecord = getLocalStore<Record<string, any>>(LOCAL_USERS_KEY, {});
 
@@ -1632,7 +1764,20 @@ export const supabaseService = {
     setLocalStore(LOCAL_USERS_KEY, usersRecord);
 
     // Initialize business settings
-    this.initDefaultBusinessSettings(newId, data.businessName);
+    await this.initDefaultBusinessSettings(newId, data.businessName);
+
+    // Attempt Supabase profiles sync
+    try {
+      await supabase.from('profiles').upsert({
+        full_name: data.fullName,
+        email,
+        mobile_number: data.mobileNumber,
+        created_at: newUser.createdAt,
+        updated_at: new Date().toISOString(),
+      });
+    } catch {}
+
+    broadcastUsersChange('user_created', { user: newUser });
 
     return { success: true, user: newUser };
   },
@@ -1719,7 +1864,14 @@ export const supabaseService = {
   getPricingPlans(): PricingPlan[] {
     const stored = getLocalStore<PricingPlan[] | null>(LOCAL_PLANS_KEY, null);
     if (stored && Array.isArray(stored) && stored.length > 0) {
-      return stored;
+      const hasUpdatedPrices = stored.some(
+        (p) =>
+          (p.id === 'pro-plan' && p.yearlyPrice === 599) ||
+          (p.id === 'ultra-plan' && p.yearlyPrice === 1200)
+      );
+      if (hasUpdatedPrices) {
+        return stored;
+      }
     }
     setLocalStore(LOCAL_PLANS_KEY, DEFAULT_PRICING_PLANS);
     return DEFAULT_PRICING_PLANS;
@@ -1748,5 +1900,36 @@ export const supabaseService = {
   resetPricingPlans(): { success: boolean; plans: PricingPlan[] } {
     setLocalStore(LOCAL_PLANS_KEY, DEFAULT_PRICING_PLANS);
     return { success: true, plans: DEFAULT_PRICING_PLANS };
+  },
+
+  async activateUserPlan(planId: string, promoCode?: string): Promise<{ success: boolean; user?: CustomerUser; error?: string; message?: string }> {
+    const me = this.getMe();
+    if (!me.user) {
+      return { success: false, error: 'User is not logged in.' };
+    }
+
+    const updatedUser: CustomerUser = {
+      ...me.user,
+      planId: planId,
+    };
+
+    setLocalStore(LOCAL_CURRENT_USER_KEY, updatedUser);
+
+    if (updatedUser.email) {
+      const users = getLocalStore<Record<string, any>>(LOCAL_USERS_KEY, {});
+      if (users[updatedUser.email]) {
+        users[updatedUser.email] = {
+          ...users[updatedUser.email],
+          planId: planId,
+        };
+        setLocalStore(LOCAL_USERS_KEY, users);
+      }
+    }
+
+    return {
+      success: true,
+      user: updatedUser,
+      message: 'Plan activated successfully!',
+    };
   },
 };

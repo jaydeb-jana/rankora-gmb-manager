@@ -1,10 +1,82 @@
 import { GoogleGenAI } from '@google/genai';
 
 export const CANDIDATE_GEMINI_MODELS = [
-  'gemini-2.5-flash',
   'gemini-2.0-flash',
+  'gemini-2.0-flash-001',
+  'gemini-flash-latest',
+  'gemini-2.5-flash-preview',
+  'gemini-2.0-flash-lite',
+  'gemini-1.5-flash-latest',
+  'gemini-1.5-flash-8b',
   'gemini-1.5-flash',
 ];
+
+let cachedActiveModel: string | null = null;
+
+/**
+ * Dynamically queries Google's ModelService for the list of available models
+ * for the user's specific API key, and selects the best, most human-like, lowest-cost Flash model.
+ */
+export async function resolveBestModel(ai: GoogleGenAI): Promise<string> {
+  if (cachedActiveModel) {
+    return cachedActiveModel;
+  }
+
+  try {
+    const pager = await ai.models.list();
+    const available: string[] = [];
+
+    if (Array.isArray((pager as any)?.page)) {
+      for (const m of (pager as any).page) {
+        if (!m.supportedGenerationMethods || m.supportedGenerationMethods.includes('generateContent')) {
+          available.push(m.name ? m.name.replace(/^models\//, '') : '');
+        }
+      }
+    } else if (pager && typeof (pager as any)[Symbol.asyncIterator] === 'function') {
+      for await (const m of pager as any) {
+        if (!m.supportedGenerationMethods || m.supportedGenerationMethods.includes('generateContent')) {
+          available.push(m.name ? m.name.replace(/^models\//, '') : '');
+        }
+      }
+    }
+
+    const preferenceOrder = [
+      'gemini-2.0-flash',
+      'gemini-2.0-flash-001',
+      'gemini-flash-latest',
+      'gemini-2.5-flash-preview',
+      'gemini-2.0-flash-lite',
+      'gemini-1.5-flash-latest',
+      'gemini-1.5-flash-8b',
+      'gemini-1.5-flash',
+      'gemini-1.5-pro',
+      'gemini-2.5-pro',
+    ];
+
+    for (const p of preferenceOrder) {
+      if (available.includes(p)) {
+        cachedActiveModel = p;
+        return p;
+      }
+    }
+
+    const anyFlash = available.find((m) => m.toLowerCase().includes('flash'));
+    if (anyFlash) {
+      cachedActiveModel = anyFlash;
+      return anyFlash;
+    }
+
+    if (available.length > 0 && available[0]) {
+      cachedActiveModel = available[0];
+      return available[0];
+    }
+  } catch (err) {
+    console.warn('[Gemini listModels fallback notice]', err);
+  }
+
+  // Safe universal low-cost model default
+  return 'gemini-2.0-flash';
+}
 
 export function getAiClient(apiKeyOverride?: string): GoogleGenAI | null {
   const apiKey = (apiKeyOverride || (import.meta as any).env?.VITE_GEMINI_API_KEY || '').trim();
@@ -67,20 +139,27 @@ export async function testGeminiApiKey(apiKey: string): Promise<{ valid: boolean
     const ai = new GoogleGenAI({
       apiKey: key,
     });
+    
+    // Dynamically resolve active model supported by this API key
+    const bestModel = await resolveBestModel(ai);
+
+    const modelsToTry = [bestModel, ...CANDIDATE_GEMINI_MODELS.filter((m) => m !== bestModel)];
     let lastErr: any = null;
-    for (const model of CANDIDATE_GEMINI_MODELS) {
+
+    for (const model of modelsToTry) {
       try {
         const response = await ai.models.generateContent({
           model,
           contents: 'Respond with OK',
         });
         if (response && response.text) {
-          return { valid: true, message: `API key verified and active (${model}).` };
+          cachedActiveModel = model;
+          return { valid: true, message: `API key verified and active (Model: ${model}).` };
         }
       } catch (err: any) {
         lastErr = err;
         const msg = err?.message || '';
-        if (msg.includes('404') || msg.includes('not found') || msg.includes('NOT_FOUND')) {
+        if (msg.includes('404') || msg.includes('not found') || msg.includes('NOT_FOUND') || msg.includes('not supported')) {
           continue;
         }
         return { valid: false, message: formatGeminiErrorMessage(err) };
@@ -112,61 +191,92 @@ export interface GenerateDraftOptions {
 
 export async function generateCustomerReviewDraft(options: GenerateDraftOptions): Promise<string> {
   const ai = getAiClient(options.apiKeyOverride);
-  const lang = options.language || 'English';
-
-  const systemInstruction = `You are a real, satisfied customer writing a genuine, organic Google Business Profile review.
-Write in first-person natural perspective. Avoid sounding like an advertisement, marketing copy, or an AI bot.
-Do NOT use overly formal words, corporate buzzwords, hashtags, or quotation marks around the review.
-Follow these review writing guidelines if applicable: ${options.reviewWritingRules || 'Keep it natural, genuine and specific to the service received.'}
-Output ONLY the review text itself, with no introductory or concluding pleasantries.`;
-
-  const activeServices = (options.selectedServices && options.selectedServices.length > 0)
-    ? options.selectedServices.join(', ')
-    : (options.productsAndServices || 'Quality products and services');
-
-  const prompt = `Write a ${options.starRating}-star customer review for "${options.businessName}" (${options.category}).
-Key details about the business:
-- Services & Offerings experienced: ${activeServices}
-${options.shopAiDetails ? `- Shop & Business Details: ${options.shopAiDetails}` : ''}
-- Atmosphere / Experience: ${options.customerExperience || 'Clean, welcoming and professional'}
-
-Things I specifically loved and want to mention:
-${options.highlightChips.length > 0 ? options.highlightChips.map((c) => `- ${c}`).join('\n') : '- Great service and quality'}
-${options.customNotes?.trim() ? `\nCUSTOMER'S PERSONAL NOTES (Enhance and smoothly integrate these specific points): "${options.customNotes.trim()}"` : ''}
-
-Keywords to blend in naturally if appropriate:
-${(options.customKeywords || []).join(', ')}
-
-Review Style / Tone: ${options.brandTone || 'friendly'}
-${options.reviewWritingRules ? `Specific Review Writing Rules to obey:\n${options.reviewWritingRules}` : ''}
-
-Language required: ${lang}.
-Keep it concise, authentic, friendly, and approximately 2-4 sentences.`;
-
   if (!ai) {
     throw new Error('Gemini API key is not configured for this business. Please add a valid API key in the dashboard API settings.');
   }
 
+  const lang = options.language || 'English';
+  const rating = Number(options.starRating) || 5;
+  const isPositive = rating >= 4;
+  const isNeutral = rating === 3;
+  const isNegative = rating <= 2;
+
+  let personaInstruction = '';
+  let ratingPromptGuide = '';
+
+  if (isPositive) {
+    personaInstruction = `You are a real, satisfied customer writing a genuine, positive ${rating}-star Google Business Profile review.
+Express authentic customer satisfaction, praise, and appreciation in a warm, natural, and conversational tone.`;
+    ratingPromptGuide = `Write a genuine, positive ${rating}-star customer review praising "${options.businessName}" (${options.category}).`;
+  } else if (isNeutral) {
+    personaInstruction = `You are a real customer writing an honest, balanced 3-star Google Business Profile review.
+Mention both acceptable points and areas that could be improved. Keep the tone moderate, fair, and constructive.`;
+    ratingPromptGuide = `Write a balanced, realistic 3-star customer review with constructive feedback for "${options.businessName}" (${options.category}).`;
+  } else {
+    personaInstruction = `You are a real, disappointed customer writing an honest, critical ${rating}-star Google Business Profile review.
+Write in a frustrated, dissatisfied, yet realistic customer tone detailing poor service, issues faced, and disappointment.
+Do NOT praise the business or sound satisfied; reflect the genuine frustration and dissatisfaction of a ${rating}-star experience.`;
+    ratingPromptGuide = `Write an authentic, critical ${rating}-star customer review expressing dissatisfaction, disappointment, and issues faced with "${options.businessName}" (${options.category}).`;
+  }
+
+  const systemInstruction = `${personaInstruction}
+Write in first-person natural perspective, exactly like everyday people write reviews on Google Maps.
+Rules:
+- Sound 100% human, casual, and authentic.
+- Avoid sounding like an advertisement, marketing copy, or an AI bot.
+- Do NOT use formal corporate jargon, buzzwords (like "testament", "seamless blend", "nestled"), hashtags, or quotation marks.
+- Follow these guidelines: ${options.reviewWritingRules || (isPositive ? 'Keep it natural, genuine and specific to the service received.' : 'Express honest, constructive customer feedback.')}
+- Keep it concise (2-4 sentences).
+- Output ONLY the review text itself, with no introductory or concluding pleasantries.`;
+
+  const activeServices = (options.selectedServices && options.selectedServices.length > 0)
+    ? options.selectedServices.join(', ')
+    : (options.productsAndServices || '');
+
+  const prompt = `${ratingPromptGuide}
+
+KEY CONTEXT & DETAILS:
+${activeServices ? `- Services or Products Experienced: "${activeServices}" (Mention these exact services naturally)` : ''}
+${options.shopAiDetails?.trim() ? `- Business Specialty & Shop Details: "${options.shopAiDetails.trim()}"` : ''}
+${options.customerExperience?.trim() ? `- Atmosphere & Experience: "${options.customerExperience.trim()}"` : ''}
+
+${isPositive ? 'HIGHLIGHTS THE CUSTOMER LIKED:' : isNeutral ? 'KEY FEEDBACK & OBSERVATIONS:' : 'SPECIFIC ISSUES & GRIEVANCES FACED:'}
+${options.highlightChips.length > 0 ? options.highlightChips.map((c) => `- ${c}`).join('\n') : isNegative ? '- Poor service and unsatisfactory experience' : '- Good service'}
+${options.customNotes?.trim() ? `\nCUSTOMER'S PERSONAL NOTES (Incorporate these points directly): "${options.customNotes.trim()}"` : ''}
+
+${options.reviewWritingRules?.trim() && isPositive ? `BUSINESS OWNER'S SPECIFIC WRITING RULES:
+${options.reviewWritingRules.trim()}
+` : ''}
+Review Tone: ${isNegative ? 'disappointed, critical, and dissatisfied' : isNeutral ? 'balanced and constructive' : options.brandTone || 'friendly and authentic'}
+Language required: ${lang}.
+
+Write a natural, conversational 2-4 sentence Google review now:`;
+
+  // Dynamically resolve the best active, low-cost model for this account
+  const bestModel = await resolveBestModel(ai);
+  const modelsToTry = [bestModel, ...CANDIDATE_GEMINI_MODELS.filter((m) => m !== bestModel)];
+
   let lastError: any = null;
-  for (const model of CANDIDATE_GEMINI_MODELS) {
+  for (const model of modelsToTry) {
     try {
       const response = await ai.models.generateContent({
         model,
         contents: prompt,
         config: {
           systemInstruction,
-          temperature: 0.8,
+          temperature: 0.85,
         },
       });
 
       const text = response.text?.trim();
       if (text) {
+        cachedActiveModel = model;
         return text.replace(/^"|"$/g, '');
       }
     } catch (err: any) {
       lastError = err;
       const msg = err?.message || '';
-      if (msg.includes('404') || msg.includes('not found') || msg.includes('NOT_FOUND')) {
+      if (msg.includes('404') || msg.includes('not found') || msg.includes('NOT_FOUND') || msg.includes('not supported')) {
         continue;
       }
       throw new Error(formatGeminiErrorMessage(err));
@@ -210,7 +320,10 @@ Customer Review Text: "${options.reviewText}"
 Please craft a thoughtful, brand-aligned public response to this review.`;
 
   if (ai) {
-    for (const model of CANDIDATE_GEMINI_MODELS) {
+    const bestModel = await resolveBestModel(ai);
+    const modelsToTry = [bestModel, ...CANDIDATE_GEMINI_MODELS.filter((m) => m !== bestModel)];
+
+    for (const model of modelsToTry) {
       try {
         const response = await ai.models.generateContent({
           model,
@@ -223,11 +336,12 @@ Please craft a thoughtful, brand-aligned public response to this review.`;
 
         const text = response.text?.trim();
         if (text) {
+          cachedActiveModel = model;
           return text.replace(/^"|"$/g, '');
         }
       } catch (err: any) {
         const msg = err?.message || '';
-        if (msg.includes('404') || msg.includes('not found') || msg.includes('NOT_FOUND')) {
+        if (msg.includes('404') || msg.includes('not found') || msg.includes('NOT_FOUND') || msg.includes('not supported')) {
           continue;
         }
         break;

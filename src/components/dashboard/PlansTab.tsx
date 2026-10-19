@@ -9,18 +9,30 @@ import {
   MessageCircle,
   Edit,
   ShieldCheck,
+  X,
+  Tag,
+  Check,
+  PartyPopper,
 } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../lib/api';
 import { PricingPlan } from '../../types';
+import { SkeletonCard } from '../common/LoadingScreen';
 
 export function PlansTab() {
-  const { user } = useAuth();
-  const { showSuccess } = useToast();
+  const { user, refreshUser } = useAuth();
+  const { showSuccess, showError } = useToast();
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('yearly');
   const [plans, setPlans] = useState<PricingPlan[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+
+  // Activation & Promo Code States
+  const [selectedPlanForCheckout, setSelectedPlanForCheckout] = useState<PricingPlan | null>(null);
+  const [promoCodeInput, setPromoCodeInput] = useState('');
+  const [promoError, setPromoError] = useState('');
+  const [activationSuccess, setActivationSuccess] = useState(false);
+  const [activating, setActivating] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -41,6 +53,46 @@ export function PlansTab() {
     return `https://wa.me/917872490719?text=${msg}`;
   };
 
+  const handleOpenCheckout = (plan: PricingPlan) => {
+    setSelectedPlanForCheckout(plan);
+    setPromoCodeInput('');
+    setPromoError('');
+    setActivationSuccess(false);
+  };
+
+  const handleApplyPromoCode = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!selectedPlanForCheckout) return;
+
+    const trimmed = promoCodeInput.trim().toLowerCase();
+    if (!trimmed) {
+      setPromoError('Please enter a promo code.');
+      return;
+    }
+
+    if (trimmed !== 'arventaventures-free') {
+      setPromoError('Invalid promo code. Please enter a valid activation code or contact support.');
+      return;
+    }
+
+    setActivating(true);
+    setPromoError('');
+    try {
+      const res = await api.activateUserPlan(selectedPlanForCheckout.id, 'arventaventures-free');
+      if (res.error) {
+        setPromoError(res.error);
+      } else {
+        await refreshUser();
+        setActivationSuccess(true);
+        showSuccess(`Congratulations! ${selectedPlanForCheckout.name} activated successfully.`);
+      }
+    } catch {
+      setPromoError('Failed to activate plan. Please try again.');
+    } finally {
+      setActivating(false);
+    }
+  };
+
   return (
     <div className="space-y-8 max-w-5xl mx-auto pb-16">
       {/* Header */}
@@ -55,7 +107,7 @@ export function PlansTab() {
         </h1>
 
         <p className="text-sm sm:text-base text-[#5f6368] max-w-2xl mx-auto leading-relaxed">
-          Upgrade your Google Business Profile review automation with official Google QR counter stands, Gemini 3.8 Flash AI generation, and verified owner replies.
+          Upgrade your Google Business Profile review automation with official Google QR counter stands, intelligent Gemini Flash AI generation, and verified owner replies.
         </p>
 
         {/* Billing Switcher Toggle */}
@@ -91,16 +143,19 @@ export function PlansTab() {
       </div>
 
       {/* Dynamic Cards: Pro Plan, Ultra Plan, etc. */}
-      <div
-        className={`grid gap-6 sm:gap-8 items-stretch ${
-          plans.length === 1
-            ? 'grid-cols-1 max-w-md mx-auto'
-            : plans.length === 2
-            ? 'grid-cols-1 md:grid-cols-2'
-            : 'grid-cols-1 md:grid-cols-3'
-        }`}
-      >
-        {plans.map((p) => {
+      {loading ? (
+        <SkeletonCard count={2} />
+      ) : (
+        <div
+          className={`grid gap-6 sm:gap-8 items-stretch ${
+            plans.length === 1
+              ? 'grid-cols-1 max-w-md mx-auto'
+              : plans.length === 2
+              ? 'grid-cols-1 md:grid-cols-2'
+              : 'grid-cols-1 md:grid-cols-3'
+          }`}
+        >
+          {plans.map((p) => {
           const isUltraOrPopular = p.isPopular;
           const displayPrice = billingCycle === 'yearly' ? p.yearlyPrice : p.monthlyPrice;
           const annualTotal = p.yearlyPrice * 12;
@@ -192,29 +247,199 @@ export function PlansTab() {
               </div>
 
               <div className="pt-6">
-                <a
-                  href={getWhatsAppUrl(p)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() =>
-                    showSuccess(
-                      `Activating ${p.name} (${billingCycle === 'yearly' ? 'Yearly' : 'Monthly'}). Opening WhatsApp support...`
-                    )
-                  }
-                  className={`w-full py-3 font-bold text-xs sm:text-sm rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                    isUltraOrPopular
-                      ? 'bg-[#1a73e8] hover:bg-[#1557b0] text-white shadow-xs'
-                      : 'bg-white hover:bg-[#f8f9fa] border-2 border-[#1a73e8] text-[#1a73e8] shadow-2xs'
-                  }`}
-                >
-                  <span>Choose {p.name}</span>
-                  <ArrowRight className="w-4 h-4" />
-                </a>
+                {user?.planId === p.id ? (
+                  <div className="w-full py-3 font-bold text-xs sm:text-sm rounded-xl flex items-center justify-center gap-2 bg-[#e6f4ea] text-[#137333] border border-[#ceead6] shadow-2xs">
+                    <CheckCircle2 className="w-4 h-4 text-[#137333]" />
+                    <span>Current Active Plan</span>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleOpenCheckout(p)}
+                    className={`w-full py-3 font-bold text-xs sm:text-sm rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                      isUltraOrPopular
+                        ? 'bg-[#1a73e8] hover:bg-[#1557b0] text-white shadow-xs'
+                        : 'bg-white hover:bg-[#f8f9fa] border-2 border-[#1a73e8] text-[#1a73e8] shadow-2xs'
+                    }`}
+                  >
+                    <span>Choose {p.name}</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             </div>
           );
         })}
       </div>
+      )}
+
+      {/* Plan Activation & Promo Code Modal */}
+      {selectedPlanForCheckout && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl max-w-lg w-full border border-[#dadce0] shadow-2xl overflow-hidden relative">
+            {/* Modal Header */}
+            <div className="px-6 py-4 bg-[#f8f9fa] border-b border-[#dadce0] flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-[#e8f0fe] text-[#1a73e8] flex items-center justify-center">
+                  {selectedPlanForCheckout.isPopular ? (
+                    <Crown className="w-4 h-4 text-[#1a73e8]" />
+                  ) : (
+                    <Zap className="w-4 h-4 text-[#1a73e8]" />
+                  )}
+                </div>
+                <h3 className="font-bold text-base text-[#202124]">
+                  {activationSuccess ? 'Plan Activated' : `Activate ${selectedPlanForCheckout.name}`}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedPlanForCheckout(null)}
+                className="w-8 h-8 rounded-lg text-[#5f6368] hover:bg-[#dadce0]/50 hover:text-[#202124] flex items-center justify-center transition-colors cursor-pointer"
+                title="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6">
+              {activationSuccess ? (
+                /* CELEBRATORY SUCCESS VIEW */
+                <div className="text-center space-y-5 py-2">
+                  <div className="w-16 h-16 rounded-full bg-[#e6f4ea] border border-[#ceead6] text-[#137333] flex items-center justify-center mx-auto shadow-xs">
+                    <PartyPopper className="w-8 h-8 text-[#137333]" />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <h3 className="text-xl sm:text-2xl font-extrabold text-[#202124] tracking-tight">
+                      🎉 Congratulations! Plan Activated!
+                    </h3>
+                    <p className="text-xs sm:text-sm text-[#5f6368] max-w-sm mx-auto">
+                      Your account has been upgraded to <strong>{selectedPlanForCheckout.name}</strong> successfully with code <code>arventaventures-free</code>.
+                    </p>
+                  </div>
+
+                  <div className="p-4 bg-[#f8f9fa] border border-[#dadce0] rounded-xl text-left space-y-2 text-xs">
+                    <div className="flex justify-between items-center pb-2 border-b border-[#e8eaed]">
+                      <span className="text-[#5f6368]">Activated Plan:</span>
+                      <span className="font-bold text-[#202124]">{selectedPlanForCheckout.name}</span>
+                    </div>
+                    <div className="flex justify-between items-center pb-2 border-b border-[#e8eaed]">
+                      <span className="text-[#5f6368]">Subscription Status:</span>
+                      <span className="font-bold text-[#137333] flex items-center gap-1">
+                        <Check className="w-3.5 h-3.5" />
+                        Active Lifetime Access
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center pb-2 border-b border-[#e8eaed]">
+                      <span className="text-[#5f6368]">Promo Code:</span>
+                      <span className="font-mono text-[#1a73e8] font-semibold">arventaventures-free</span>
+                    </div>
+                    <div className="flex justify-between items-center font-bold text-sm text-[#202124] pt-1">
+                      <span>Total Amount Paid:</span>
+                      <span className="text-[#137333]">₹0 (100% Free Lifetime Access)</span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPlanForCheckout(null)}
+                    className="w-full py-3 bg-[#1a73e8] hover:bg-[#1557b0] text-white font-bold text-sm rounded-xl transition-colors cursor-pointer shadow-xs"
+                  >
+                    Done &amp; Continue
+                  </button>
+                </div>
+              ) : (
+                /* CHECKOUT & PROMO CODE VIEW */
+                <div className="space-y-5">
+                  {/* Plan Price Summary */}
+                  <div className="p-4 rounded-xl bg-[#f8fafd] border border-[#d2e3fc] flex items-center justify-between">
+                    <div>
+                      <h4 className="font-bold text-sm text-[#202124]">
+                        {selectedPlanForCheckout.name}
+                      </h4>
+                      <p className="text-xs text-[#5f6368]">
+                        {billingCycle === 'yearly' ? 'Yearly Billing (20% Off)' : 'Monthly Billing'}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xl font-extrabold text-[#202124]">
+                        ₹{billingCycle === 'yearly' ? selectedPlanForCheckout.yearlyPrice : selectedPlanForCheckout.monthlyPrice}
+                        <span className="text-xs font-normal text-[#5f6368]"> / month</span>
+                      </div>
+                      {billingCycle === 'yearly' && (
+                        <span className="text-[10px] text-[#5f6368]">
+                          Billed annually at ₹{(selectedPlanForCheckout.yearlyPrice * 12).toLocaleString()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Promo Code Activation Box */}
+                  <form onSubmit={handleApplyPromoCode} className="space-y-2.5">
+                    <label className="block text-xs font-bold text-[#202124] uppercase tracking-wider text-[#5f6368] flex items-center gap-1.5">
+                      <Tag className="w-3.5 h-3.5 text-[#1a73e8]" />
+                      <span>Have a Promo / Activation Code?</span>
+                    </label>
+
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={promoCodeInput}
+                        onChange={(e) => {
+                          setPromoCodeInput(e.target.value);
+                          if (promoError) setPromoError('');
+                        }}
+                        placeholder="e.g. arventaventures-free"
+                        className="flex-1 px-3.5 py-2.5 bg-white border border-[#dadce0] rounded-xl text-xs sm:text-sm text-[#202124] placeholder-[#80868b] focus:outline-none focus:border-[#1a73e8] focus:ring-2 focus:ring-[#1a73e8]/20 transition-all font-mono"
+                        disabled={activating}
+                      />
+                      <button
+                        type="submit"
+                        disabled={activating || !promoCodeInput.trim()}
+                        className="px-5 py-2.5 bg-[#1a73e8] hover:bg-[#1557b0] disabled:bg-[#dadce0] disabled:text-[#80868b] text-white text-xs sm:text-sm font-semibold rounded-xl transition-colors cursor-pointer shadow-xs shrink-0"
+                      >
+                        {activating ? 'Applying...' : 'Apply Code'}
+                      </button>
+                    </div>
+
+                    {promoError && (
+                      <p className="text-xs text-[#d93025] font-medium pt-0.5">
+                        {promoError}
+                      </p>
+                    )}
+                  </form>
+
+                  <div className="relative my-4">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-[#e8eaed]" />
+                    </div>
+                    <div className="relative flex justify-center text-xs">
+                      <span className="bg-white px-3 text-[#5f6368]">or activate without promo code</span>
+                    </div>
+                  </div>
+
+                  {/* Alternative: Pay / Activate via WhatsApp */}
+                  <div className="space-y-2">
+                    <p className="text-xs text-[#5f6368]">
+                      Don't have an activation code? Connect directly with our team to activate this plan via official payment:
+                    </p>
+                    <a
+                      href={getWhatsAppUrl(selectedPlanForCheckout)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full py-2.5 px-4 bg-[#25d366] hover:bg-[#1ebd59] text-white font-bold text-xs sm:text-sm rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-xs"
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      <span>Activate via WhatsApp</span>
+                    </a>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Arventa Ventures Performance & Direct Contact Callout */}
       <div className="p-5 sm:p-6 bg-[#f8fafd] border border-[#d2e3fc] rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
